@@ -1,0 +1,6 @@
+{
+    "servletresolver.paths": [
+        "+/bin/staxsync/searchstax",
+        "+/bin/searchstaxconnector/wizard"
+    ]
+}
