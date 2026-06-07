@@ -73,7 +73,21 @@ API tokens are encrypted in JCR via AEM `CryptoSupport`. OSGi configs in `ui.con
 - `/bin/searchstaxconnector/wizard/initial-setup-load`
 - `/bin/searchstaxconnector/wizard/initial-setup-config` (POST)
 
-If a previous install replaced the global Sling Servlet Resolver config, remove the orphan `org.apache.sling.servlets.resolver.internal.SlingServletResolver` config from OSGi Console and reinstall `ui.config`.
+### WKND / site rendering broken after install
+
+Older builds shipped a **global** publish OSGi config (`JcrResourceResolverFactoryImpl.cfg.json` without a `~searchstaxconnector` suffix) that **replaced AEM's default resource resolver mappings**. That breaks WKND pages, templates, and short URLs on **publish** (port 4503).
+
+**Fix on the affected instance (do this before reinstalling):**
+
+1. Open **OSGi Console** on the broken instance (`http://localhost:4503/system/console/configMgr` for publish, or 4502 if publish runmode is co-located).
+2. Find **Apache Sling Resource Resolver Factory** (PID: `org.apache.sling.jcr.resource.internal.JcrResourceResolverFactoryImpl`).
+3. If a config exists with only `/content/searchstaxconnector/` mapping, **delete** that configuration (trash icon).
+4. Ensure the default mapping is restored (should include `/content/</`, `/libs/</`, `/etc/`</`, etc.). On a fresh AEM SDK you can compare with an untouched instance.
+5. **Restart** that AEM instance.
+
+Also check for an orphan global **Apache Sling Servlet Resolver** config (PID without `~searchstaxconnector` suffix) and delete it if present. Connector configs must use named suffixes such as `~searchstaxconnector` so they do not replace platform defaults.
+
+Current `ui.config` only ships **named** factory configs (`~searchstaxconnector`) and no longer includes the publish resource-resolver override.
 
 Use **Test Configuration** on the API wizard to validate connectivity (`/bin/staxsync/searchstax/test-connection`).
 
