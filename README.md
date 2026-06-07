@@ -53,6 +53,7 @@ After install, open **Tools → SearchStax Connector** on the author instance:
 | Language Mapping | Map AEM language codes to SearchStax language codes |
 | Full Index Configuration | Path includes/excludes for bulk reindex scope |
 | Email Configuration | SMTP settings and recipients for indexing failure notifications |
+| Indexing Report | Last 24 hours of incremental indexing success/failure events |
 
 Configuration is stored under `/conf/searchstaxconnector/settings/*`:
 
@@ -76,13 +77,24 @@ If a previous install replaced the global Sling Servlet Resolver config, remove 
 
 Use **Test Configuration** on the API wizard to validate connectivity (`/bin/staxsync/searchstax/test-connection`).
 
-### Not yet implemented (Step 3)
+### Incremental indexing (Step 3)
 
-- Full index **Run** button (UI present; execution returns HTTP 503 until indexing logic is added)
-- Incremental indexing on activation/deactivation
+- Listens on **author** for replication `ACTIVATE` / `DEACTIVATE` / `DELETE`
+- Gates on Initial Setup (`enableConnector`, root/exclude paths, allowed asset MIME types)
+- Builds Solr documents from metadata + language mappings (`title_txt_en`, `language_s`, etc.)
+- Batches updates (10s debounce, max 100 paths per job/API call)
+- Enforces SearchStax service limits (100 KB/doc, 10 MB payload, URL length) with HTTP 413 batch-splitting, exponential backoff on 429/5xx, and documented error guidance
+- Logs each step and stores audit records under `/var/searchstaxconnector/incremental/audit`
+- Sends failure email when Email config notifications are enabled
+- **Indexing Report** wizard shows the last 24 hours of results (auto-purged)
+
+### Not yet implemented
+
+- Full index **Run** button execution (UI present; service still returns HTTP 503)
 
 ## Project status
 
 - Step 1: Maven project setup — complete
 - Step 2: Author configuration UI — complete
-- Step 3: Incremental and full reindex logic — pending
+- Step 3: Incremental indexing — complete
+- Step 3b: Full reindex execution — pending

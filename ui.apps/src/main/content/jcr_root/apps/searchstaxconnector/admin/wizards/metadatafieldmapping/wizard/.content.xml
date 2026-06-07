@@ -240,14 +240,18 @@
                                                                                         name="./fieldType"
                                                                                         emptyText="Select field type">
                                                                                         <items jcr:primaryType="nt:unstructured">
-                                                                                            <string
-                                                                                                jcr:primaryType="nt:unstructured"
-                                                                                                text="string"
-                                                                                                value="string"/>
                                                                                             <text
                                                                                                 jcr:primaryType="nt:unstructured"
                                                                                                 text="text"
                                                                                                 value="text"/>
+                                                                                            <strings
+                                                                                                jcr:primaryType="nt:unstructured"
+                                                                                                text="strings"
+                                                                                                value="strings"/>
+                                                                                            <string
+                                                                                                jcr:primaryType="nt:unstructured"
+                                                                                                text="string"
+                                                                                                value="string"/>
                                                                                             <int
                                                                                                 jcr:primaryType="nt:unstructured"
                                                                                                 text="int"

@@ -1,0 +1,42 @@
+.searchstax-indexing-report-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0 16px;
+}
+
+.searchstax-indexing-report-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.searchstax-indexing-report-summary button {
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    background: #fff;
+    padding: 4px 10px;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.searchstax-indexing-report-summary button.is-active {
+    border-color: #1473e6;
+    box-shadow: inset 0 0 0 1px #1473e6;
+}
+
+.searchstax-indexing-report-summary button[data-status="ALL"] {
+    font-weight: 600;
+}
+
+.searchstax-indexing-report-filter-label {
+    font-size: 13px;
+    color: #4b4b4b;
+}
+
+.searchstax-indexing-report-empty {
+    margin-top: 8px;
+    color: #6e6e6e;
+    font-size: 13px;
+}

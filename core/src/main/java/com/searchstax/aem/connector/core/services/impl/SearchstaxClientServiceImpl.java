@@ -1,9 +1,13 @@
 package com.searchstax.aem.connector.core.services.impl;
 
+import com.searchstax.aem.connector.core.constants.IncrementalIndexingDefaults;
 import com.searchstax.aem.connector.core.constants.SearchStaxFullIndexDefaults;
+import com.searchstax.aem.connector.core.constants.SearchStaxServiceLimits;
 import com.searchstax.aem.connector.core.dto.response.ApiResponse;
+import com.searchstax.aem.connector.core.services.SearchStaxApiErrorPolicy;
 import com.searchstax.aem.connector.core.services.SearchStaxConfigurationService;
 import com.searchstax.aem.connector.core.services.SearchstaxClientService;
+import com.searchstax.aem.connector.core.utils.ProtectedValueCodec;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
@@ -29,6 +33,9 @@ public class SearchstaxClientServiceImpl implements SearchstaxClientService {
 
     @Reference
     private SearchStaxConfigurationService configurationService;
+
+    @Reference
+    private ProtectedValueCodec protectedValueCodec;
 
     @Override
     public ApiResponse indexDocument(final String requestJson) {
@@ -58,6 +65,21 @@ public class SearchstaxClientServiceImpl implements SearchstaxClientService {
                     "SearchStax update token is not configured");
         }
 
+        if (protectedValueCodec != null && protectedValueCodec.looksEncrypted(token)) {
+            LOG.error(
+                    "{} Update API token is still encrypted after decryption. "
+                            + "Re-save API configuration or verify AEM CryptoSupport.",
+                    IncrementalIndexingDefaults.LOG_PREFIX);
+            return new ApiResponse(
+                    HttpURLConnection.HTTP_INTERNAL_ERROR,
+                    "Update API token could not be decrypted. Re-save API configuration in the wizard.");
+        }
+
+        LOG.info(
+                "{} Calling SearchStax update API endpoint={} tokenDecrypted=true",
+                IncrementalIndexingDefaults.LOG_PREFIX,
+                baseEndpoint);
+
         try {
             final StringBuilder urlBuilder = new StringBuilder(baseEndpoint);
             if (baseEndpoint.contains("?")) {
@@ -67,7 +89,14 @@ public class SearchstaxClientServiceImpl implements SearchstaxClientService {
             }
             urlBuilder.append("commitWithin=").append(SearchStaxFullIndexDefaults.COMMIT_WITHIN_MS);
 
-            final URL url = new URL(urlBuilder.toString());
+            final String requestUrl = urlBuilder.toString();
+            if (requestUrl.length() > SearchStaxServiceLimits.MAX_URL_LENGTH) {
+                final String message = SearchStaxApiErrorPolicy.resolveGuidanceMessage(414, null);
+                LOG.error("{} {}", IncrementalIndexingDefaults.LOG_PREFIX, message);
+                return new ApiResponse(414, message);
+            }
+
+            final URL url = new URL(requestUrl);
             connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
             connection.setConnectTimeout(CONNECT_TIMEOUT_MS);

@@ -1,14 +1,11 @@
 package com.searchstax.aem.connector.core.services.impl;
 
-import com.adobe.granite.crypto.CryptoException;
-import com.adobe.granite.crypto.CryptoSupport;
 import com.searchstax.aem.connector.core.config.ApiConfigService;
 import com.searchstax.aem.connector.core.config.model.ApiConfig;
 import com.searchstax.aem.connector.core.services.SearchStaxConfigurationService;
+import com.searchstax.aem.connector.core.utils.ProtectedValueCodec;
 import org.osgi.service.component.annotations.Component;
 import org.osgi.service.component.annotations.Reference;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Read facade for SearchStax API settings persisted in JCR at
@@ -17,33 +14,18 @@ import org.slf4j.LoggerFactory;
 @Component(service = SearchStaxConfigurationService.class)
 public class SearchStaxConfigurationServiceImpl implements SearchStaxConfigurationService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(SearchStaxConfigurationServiceImpl.class);
-
     @Reference
     private ApiConfigService apiConfigService;
 
     @Reference
-    private CryptoSupport cryptoSupport;
+    private ProtectedValueCodec protectedValueCodec;
 
     private ApiConfig config() {
         return apiConfigService.getConfiguration();
     }
 
     private String unprotectIfNeeded(final String value) {
-        if (value == null || value.isEmpty()) {
-            return "";
-        }
-        if (cryptoSupport == null) {
-            return value;
-        }
-        try {
-            if (cryptoSupport.isProtected(value)) {
-                return cryptoSupport.unprotect(value);
-            }
-        } catch (CryptoException e) {
-            LOG.warn("Failed to decrypt protected value; returning stored value as-is", e);
-        }
-        return value;
+        return protectedValueCodec.unprotectIfNeeded(value);
     }
 
     @Override

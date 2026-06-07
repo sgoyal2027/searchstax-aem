@@ -52,6 +52,25 @@
         return value;
     }
 
+    var MULTI_VALUE_AEM_FIELDS = ["cq:tags", "dc:subject"];
+
+    function suggestFieldTypeForMapping(item, mappingValue) {
+
+        var fieldType = item.querySelector("coral-select[name*='fieldType']");
+
+        if (!fieldType || MULTI_VALUE_AEM_FIELDS.indexOf(mappingValue) === -1) {
+            return;
+        }
+
+        Coral.commons.ready(fieldType, function () {
+
+            if (!fieldType.value || fieldType.value === "text") {
+                fieldType.value = "strings";
+                fieldType.dispatchEvent(new Event("change", { bubbles: true }));
+            }
+        });
+    }
+
     function initializeMultifieldItem(item) {
 
         var mappingType = item.querySelector("coral-select[name*='mappingType']");
@@ -87,6 +106,8 @@
                 indexFieldName.dispatchEvent(new Event("input", { bubbles: true }));
                 indexFieldName.dispatchEvent(new Event("change", { bubbles: true }));
             }
+
+            suggestFieldTypeForMapping(item, value);
         });
     }
 
@@ -163,7 +184,12 @@
 
                     Coral.commons.ready(fieldType, function () {
 
-                        fieldType.value = mapping.type || "string";
+                        var type = mapping.type || "text";
+                        if (type === "texts") {
+                            type = "strings";
+                        }
+
+                        fieldType.value = type;
 
                         fieldType.dispatchEvent(
                             new Event("change", { bubbles: true })
@@ -230,6 +256,8 @@
             indexFieldName.dispatchEvent(new Event("input", { bubbles: true }));
             indexFieldName.dispatchEvent(new Event("change", { bubbles: true }));
         }
+
+        suggestFieldTypeForMapping(item, value);
     }
 
 

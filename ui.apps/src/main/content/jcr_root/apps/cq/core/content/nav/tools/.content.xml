@@ -45,5 +45,12 @@
                 href="/apps/searchstaxconnector/admin/wizards/emailconfiguration/wizard.html"
                 icon="email"
                 id="email-config-wizard"/>
+        <indexingreport
+                jcr:description="Incremental indexing success and failure report"
+                jcr:primaryType="nt:unstructured"
+                jcr:title="Indexing Report"
+                href="/apps/searchstaxconnector/admin/wizards/indexingreport/wizard.html"
+                icon="viewList"
+                id="indexing-report-wizard"/>
     </Searchstax>
 </jcr:root>

@@ -4,6 +4,8 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.searchstax.aem.connector.core.config.LanguageConfigService;
 import com.searchstax.aem.connector.core.config.model.LanguageMappingConfig;
+import com.searchstax.aem.connector.core.services.SolrFieldNameResolver;
+import com.searchstax.aem.connector.core.utils.LanguageCodeNormalizer;
 import com.searchstax.aem.connector.core.utils.ResolverUtil;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -63,27 +65,42 @@ public class LanguageConfigServiceImpl implements LanguageConfigService {
             return Optional.empty();
         }
 
-        final String normalizedAemLanguage = normalizeLanguageCode(aemLanguage);
+        final String normalizedAemLanguage = LanguageCodeNormalizer.normalize(aemLanguage);
+        final String baseAemLanguage = LanguageCodeNormalizer.baseLanguage(normalizedAemLanguage);
+
+        LanguageMappingConfig exactMatch = null;
+        LanguageMappingConfig baseMatch = null;
 
         for (final LanguageMappingConfig mapping : getLanguageMappings()) {
             if (!mapping.isEnabled()) {
                 continue;
             }
 
-            if (normalizedAemLanguage.equals(normalizeLanguageCode(mapping.getAemLanguage()))) {
-                return Optional.ofNullable(mapping.getSearchStaxLanguage())
-                        .map(String::trim)
-                        .filter(value -> !value.isEmpty());
+            final String normalizedMappingLanguage = LanguageCodeNormalizer.normalize(mapping.getAemLanguage());
+            if (normalizedMappingLanguage.isEmpty()) {
+                continue;
+            }
+
+            if (normalizedAemLanguage.equals(normalizedMappingLanguage)) {
+                exactMatch = mapping;
+                break;
+            }
+
+            if (baseMatch == null
+                    && baseAemLanguage.equals(LanguageCodeNormalizer.baseLanguage(normalizedMappingLanguage))) {
+                baseMatch = mapping;
             }
         }
 
-        return Optional.empty();
-    }
-
-    static String normalizeLanguageCode(final String languageCode) {
-        if (languageCode == null) {
-            return "";
+        final LanguageMappingConfig selectedMapping = exactMatch != null ? exactMatch : baseMatch;
+        if (selectedMapping == null) {
+            return Optional.empty();
         }
-        return languageCode.trim().replace('-', '_').toLowerCase();
+
+        return Optional.ofNullable(selectedMapping.getSearchStaxLanguage())
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .map(SolrFieldNameResolver::normalizeLanguage)
+                .filter(value -> !value.isEmpty());
     }
 }

@@ -43,7 +43,9 @@
                         </goals>
                         <configuration>
                             <bnd><![CDATA[
-Import-Package: javax.annotation;version=0.0.0,*
+Import-Package: javax.annotation;version=0.0.0, \
+    com.day.cq.replication;version="[5.7,7)", \
+    *
                                 ]]></bnd>
                         </configuration>
                     </execution>
