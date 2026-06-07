@@ -33,7 +33,7 @@ public final class SearchStaxRequestThrottle {
         }
     }
 
-    static void resetForTests() {
+    public static void resetForTests() {
         synchronized (LOCK) {
             minIntervalMs = SearchStaxServiceLimits.DEFAULT_MIN_REQUEST_INTERVAL_MS;
             lastRequestAtMs = 0L;

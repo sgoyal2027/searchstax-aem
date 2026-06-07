@@ -14,11 +14,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
@@ -35,7 +37,22 @@ class IncrementalIndexingQueueServiceImplTest {
     @BeforeEach
     void setUp() {
         context.registerService(JobManager.class, jobManager);
-        queueService = context.registerInjectActivateService(new IncrementalIndexingQueueServiceImpl());
+        final Map<String, Object> config = new HashMap<>();
+        config.put("debounceMs", 25L);
+        queueService = context.registerInjectActivateService(new IncrementalIndexingQueueServiceImpl(), config);
+    }
+
+    @Test
+    void flushesDebouncedPathsIntoSingleJob() {
+        queueService.enqueue("/content/site/page-a", IndexingAction.INDEX);
+        queueService.enqueue("/content/site/page-b", IndexingAction.INDEX);
+
+        final ArgumentCaptor<Map<String, Object>> propertiesCaptor = ArgumentCaptor.forClass(Map.class);
+        verify(jobManager, timeout(500)).addJob(eq(IncrementalIndexingDefaults.JOB_TOPIC), propertiesCaptor.capture());
+
+        final String[] indexPaths = (String[]) propertiesCaptor.getValue()
+                .get(IncrementalIndexingDefaults.JOB_PROP_INDEX_PATHS);
+        assertEquals(2, indexPaths.length);
     }
 
     @Test

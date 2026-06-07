@@ -14,7 +14,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.when;
 
@@ -65,6 +67,51 @@ class IndexingScopeServiceImplTest {
                 context.resourceResolver(),
                 "/content/site/en/private/page");
         assertFalse(decision.isAccepted());
+    }
+
+    @Test
+    void rejectsPathOutsideConfiguredRoot() {
+        when(initialSetupConfigService.getConfiguration()).thenReturn(baseConfig());
+
+        final var decision = indexingScopeService.evaluate(
+                context.resourceResolver(),
+                "/content/other/site/page");
+        assertFalse(decision.isAccepted());
+    }
+
+    @Test
+    void acceptsAllowedAssetMimeType() {
+        final InitialSetupConfig config = baseConfig();
+        config.setAllowedFiles(new String[] {"application/pdf"});
+        when(initialSetupConfigService.getConfiguration()).thenReturn(config);
+
+        context.create().resource(
+                "/content/dam/site/sample.pdf",
+                "jcr:primaryType",
+                "dam:Asset");
+        context.create().resource(
+                "/content/dam/site/sample.pdf/jcr:content",
+                "jcr:primaryType",
+                "dam:AssetContent",
+                "jcr:mimeType",
+                "application/pdf");
+
+        final var decision = indexingScopeService.evaluate(
+                context.resourceResolver(),
+                "/content/dam/site/sample.pdf");
+        assertTrue(decision.isAccepted());
+    }
+
+    @Test
+    void resolvesPageContentForDocumentBuilding() {
+        context.create().page("/content/site/en/page");
+
+        final Resource content = indexingScopeService.resolveIndexableResource(
+                context.resourceResolver(),
+                "/content/site/en/page");
+
+        assertNotNull(content);
+        assertEquals("/content/site/en/page/jcr:content", content.getPath());
     }
 
     @Test

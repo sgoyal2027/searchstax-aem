@@ -21,6 +21,20 @@ class AemLanguageResolverTest {
     }
 
     @Test
+    void normalizesJcrLanguageLocale() {
+        final Map<String, Object> properties = new HashMap<>();
+        properties.put("jcr:language", "en-US");
+        final ValueMap valueMap = new ValueMapDecorator(properties);
+
+        assertEquals("en_us", AemLanguageResolver.readLanguageProperty(valueMap));
+    }
+
+    @Test
+    void defaultsToEnglishWhenLanguageCannotBeResolved() {
+        assertEquals("en", AemLanguageResolver.resolve(null, "/content/unknown/path", null));
+    }
+
+    @Test
     void extractsLanguageFromCountryAndLocalePath() {
         assertEquals(
                 "en",
