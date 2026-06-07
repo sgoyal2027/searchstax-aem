@@ -73,19 +73,35 @@ API tokens are encrypted in JCR via AEM `CryptoSupport`. OSGi configs in `ui.con
 - `/bin/searchstaxconnector/wizard/initial-setup-load`
 - `/bin/searchstaxconnector/wizard/initial-setup-config` (POST)
 
-### WKND / site rendering broken after install
+### WKND / AEM UI broken after install
 
-Older builds shipped a **global** publish OSGi config (`JcrResourceResolverFactoryImpl.cfg.json` without a `~searchstaxconnector` suffix) that **replaced AEM's default resource resolver mappings**. That breaks WKND pages, templates, and short URLs on **publish** (port 4503).
+Older connector builds could damage AEM in two ways:
 
-**Fix on the affected instance (do this before reinstalling):**
+#### Publish — resource resolver override
 
-1. Open **OSGi Console** on the broken instance (`http://localhost:4503/system/console/configMgr` for publish, or 4502 if publish runmode is co-located).
+A **global** publish OSGi config (`JcrResourceResolverFactoryImpl.cfg.json` without a `~searchstaxconnector` suffix) **replaced AEM's default resource resolver mappings**. That breaks WKND pages, templates, and short URLs on **publish** (port 4503).
+
+**Fix on publish (before reinstalling):**
+
+1. Open **OSGi Console** (`http://localhost:4503/system/console/configMgr`).
 2. Find **Apache Sling Resource Resolver Factory** (PID: `org.apache.sling.jcr.resource.internal.JcrResourceResolverFactoryImpl`).
-3. If a config exists with only `/content/searchstaxconnector/` mapping, **delete** that configuration (trash icon).
-4. Ensure the default mapping is restored (should include `/content/</`, `/libs/</`, `/etc/`</`, etc.). On a fresh AEM SDK you can compare with an untouched instance.
-5. **Restart** that AEM instance.
+3. If a config exists with only `/content/searchstaxconnector/` mapping, **delete** it.
+4. Ensure the default mapping is restored (`/:/`, `/libs/</`, etc.).
+5. **Restart** publish.
 
-Also check for an orphan global **Apache Sling Servlet Resolver** config (PID without `~searchstaxconnector` suffix) and delete it if present. Connector configs must use named suffixes such as `~searchstaxconnector` so they do not replace platform defaults.
+Also delete any orphan global **Apache Sling Servlet Resolver** config (PID without `~searchstaxconnector` suffix).
+
+#### Author — Tools / Sites navigation overlay
+
+Older `ui.apps` packages used a **replace** filter on `/apps/cq/core/content/nav`, which removed AEM's author navigation overlay (Sites, Assets, etc.). Only SearchStax tools remained under `/apps/cq/core/content/nav`.
+
+**Fix on author (4502):**
+
+1. In **CRXDE Lite** (`/crx/de`), delete the node `/apps/cq/core/content/nav` (or run: `curl -u admin:admin -X POST http://localhost:4502/apps/cq/core/content/nav -F :operation=delete`).
+2. Reinstall the current connector package: `mvn clean install -PautoInstallSinglePackage`.
+3. Confirm `/mnt/overlay/cq/core/content/nav.infinity.json` lists **Sites**, **Assets**, and **Searchstax** under **Tools**.
+
+Current `ui.apps` only merges `/apps/cq/core/content/nav/tools` (SearchStax entries) and does not touch the parent nav node.
 
 Current `ui.config` only ships **named** factory configs (`~searchstaxconnector`) and no longer includes the publish resource-resolver override.
 
