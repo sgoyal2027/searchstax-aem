@@ -1,0 +1,25 @@
+<sly data-sly-use.model="com.searchstax.aem.connector.core.models.SearchComponentModel"
+     data-sly-use.clientlib="/libs/granite/sightly/templates/clientlib.html"/>
+
+<sly data-sly-call="${clientlib.css @ categories='searchstaxconnector.searchux'}"/>
+<sly data-sly-call="${clientlib.js @ categories='searchstaxconnector.searchux'}"/>
+
+<div class="searchstax-aem-search"
+     data-sly-attribute.data-component-id="${model.componentId}"
+     data-sly-attribute.data-config-url="${model.configUrl}"
+     data-sly-attribute.data-render-method="${model.renderMethod}"
+     data-sly-attribute.data-faceting-type="${model.facetingType}"
+     data-sly-attribute.data-placeholder="${model.searchInputPlaceholder}">
+    <div class="searchstax-aem-search-layout">
+        <aside class="searchstax-aem-search-sidebar">
+            <div data-sly-attribute.id="${model.componentId}-facets-container"></div>
+        </aside>
+        <section class="searchstax-aem-search-main">
+            <div data-sly-attribute.id="${model.componentId}-input-container"></div>
+            <div data-sly-attribute.id="${model.componentId}-feedback-container"></div>
+            <div data-sly-attribute.id="${model.componentId}-results-container"></div>
+            <div data-sly-attribute.id="${model.componentId}-pagination-container"></div>
+            <div data-sly-attribute.id="${model.componentId}-related-container"></div>
+        </section>
+    </div>
+</div>

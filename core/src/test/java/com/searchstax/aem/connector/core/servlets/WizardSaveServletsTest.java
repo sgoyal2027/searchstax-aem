@@ -269,6 +269,60 @@ class WizardSaveServletsTest {
                 .getValueMap()
                 .get("metadataMappings", String.class);
         assertTrue(json.contains("\"aemField\":\"jcr:title\""));
+        assertTrue(json.contains("\"enabled\":true"));
+    }
+
+    @Test
+    void metadataMappingSaveServletClearsCustomPropertyForPresetField() throws Exception {
+        context.request().setParameterMap(Map.of(
+                "metadataMappings/item0/mappingType", "jcr:description",
+                "metadataMappings/item0/customProperty", "jcr:description",
+                "metadataMappings/item0/indexFieldName", "description",
+                "metadataMappings/item0/fieldType", "text",
+                "metadataMappings/item0/enabled", "true"));
+
+        final MetadataMappingSaveServlet servlet = activate(new MetadataMappingSaveServlet());
+        servlet.doPost(context.request(), context.response());
+
+        final String json = context.resourceResolver()
+                .getResource("/conf/searchstaxconnector/settings/metadatafieldmapping")
+                .getValueMap()
+                .get("metadataMappings", String.class);
+        assertTrue(json.contains("\"aemField\":\"jcr:description\""));
+        assertTrue(json.contains("\"customProperty\":\"\""));
+    }
+
+    @Test
+    void metadataMappingSaveServletDefaultsEnabledToFalseWhenMissing() throws Exception {
+        context.request().setParameterMap(Map.of(
+                "metadataMappings/item0/mappingType", "jcr:title",
+                "metadataMappings/item0/indexFieldName", "title",
+                "metadataMappings/item0/fieldType", "text"));
+
+        final MetadataMappingSaveServlet servlet = activate(new MetadataMappingSaveServlet());
+        servlet.doPost(context.request(), context.response());
+
+        final String json = context.resourceResolver()
+                .getResource("/conf/searchstaxconnector/settings/metadatafieldmapping")
+                .getValueMap()
+                .get("metadataMappings", String.class);
+        assertTrue(json.contains("\"enabled\":false"));
+    }
+
+    @Test
+    void languageMappingSaveServletDefaultsEnabledToFalseWhenMissing() throws Exception {
+        context.request().setParameterMap(Map.of(
+                "languageMappings/item0/aemLanguageType", "en",
+                "languageMappings/item0/searchStaxLanguage", "en"));
+
+        final LanguageMappingSaveServlet servlet = activate(new LanguageMappingSaveServlet());
+        servlet.doPost(context.request(), context.response());
+
+        final String json = context.resourceResolver()
+                .getResource(LanguageConfigServiceImpl.CONFIG_PATH)
+                .getValueMap()
+                .get("languageMappings", String.class);
+        assertTrue(json.contains("\"enabled\":false"));
     }
 
     @Test

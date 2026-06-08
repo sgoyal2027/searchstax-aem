@@ -96,10 +96,6 @@
                 return;
             }
 
-            if (customProperty && !customProperty.value) {
-                customProperty.value = value;
-            }
-
             if (indexFieldName && !indexFieldName.value) {
                 indexFieldName.value = formatIndexFieldName(value);
 
@@ -199,8 +195,10 @@
 
                 // ENABLED
                 if (enabled) {
-                    enabled.checked = mapping.enabled;
+                    enabled.checked = mapping.enabled === true;
                 }
+
+                handleMappingTypeChange(item, true);
 
             }, 50);
         });
@@ -238,7 +236,7 @@
         if (container) container.style.display = "none";
 
         if (customProperty) {
-            customProperty.value = value;
+            customProperty.value = "";
         }
 
         // INIT MODE → DO NOTHING
@@ -272,9 +270,10 @@
             return;
         }
 
-        // ignore init-trigger events
+        // ignore init-trigger events but still sync preset/custom fields
         if (this.__initTriggered) {
             this.__initTriggered = false;
+            handleMappingTypeChange(item, true);
             return;
         }
 

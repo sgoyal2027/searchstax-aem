@@ -137,7 +137,7 @@
                 }
 
                 if (enabled) {
-                    enabled.checked = mapping.enabled !== false;
+                    enabled.checked = mapping.enabled === true;
                 }
 
             }, 50);

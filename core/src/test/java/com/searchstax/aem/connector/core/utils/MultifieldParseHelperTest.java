@@ -48,6 +48,20 @@ class MultifieldParseHelperTest {
     }
 
     @Test
+    void treatsMissingEnabledFlagAsDisabledWhenExplicit() {
+        assertFalse(MultifieldParseHelper.isExplicitlyEnabled(new HashMap<>(), "enabled"));
+        assertFalse(MultifieldParseHelper.isExplicitlyEnabled(null, "enabled"));
+    }
+
+    @Test
+    void treatsExplicitEnabledFlagAsEnabledWhenExplicit() {
+        final Map<String, String> item = new HashMap<>();
+        item.put("enabled", "true");
+
+        assertTrue(MultifieldParseHelper.isExplicitlyEnabled(item, "enabled"));
+    }
+
+    @Test
     void returnsEnabledWhenItemIsNull() {
         assertTrue(MultifieldParseHelper.isEnabled(null, "enabled"));
     }

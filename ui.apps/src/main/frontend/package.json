@@ -1,0 +1,13 @@
+{
+  "name": "searchstax-aem-connector-frontend",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Vendors @searchstax-inc/searchstudio-ux-js for AEM clientlibs",
+  "scripts": {
+    "install:vendor": "npm install",
+    "build:vendor": "node scripts/copy-vendor.mjs"
+  },
+  "dependencies": {
+    "@searchstax-inc/searchstudio-ux-js": "^4.2.10"
+  }
+}

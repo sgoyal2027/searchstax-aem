@@ -118,6 +118,27 @@ Use **Test Configuration** on the API wizard to validate connectivity (`/bin/sta
 - Sends failure email when Email config notifications are enabled
 - **Indexing Report** wizard shows the last 24 hours of results (auto-purged)
 
+### Search UI (SearchStudio UX)
+
+The connector ships a publish-ready **SearchStax Search** AEM component powered by the vanilla JS SearchStudio UX toolkit ([searchstudio-ux-samples/pages/js](https://github.com/searchstax/searchstudio-ux-samples/tree/master/pages/js)). Vanilla JS is used instead of React/Vue/Angular because it fits AEM clientlibs and HTL components without a separate SPA build.
+
+**Configuration source:** search endpoints and keys are read from the connector wizards in JCR (`/conf/searchstaxconnector/settings/apiconfig` and language mappings), not from a static `config.js` file.
+
+| Setting | Wizard field |
+|---------|----------------|
+| Search URL | API Configuration → Select endpoint (fallback: Endpoint URL) |
+| Search auth | API Configuration → Select token (fallback: API token) |
+| Autosuggest URL | API Configuration → Autosuggest API |
+| Related searches | API Configuration → Related searches endpoint + Discovery API key |
+| Analytics | API Configuration → Analytics tracking URL + key |
+| Language | Current page locale + Language Mapping wizard (optional component override) |
+
+**Public config endpoint (publish):** `GET /bin/searchstaxconnector/search/config`
+
+**Author component:** drag **SearchStax Search** (`searchstaxconnector/components/search`) onto a page. Configure pagination vs infinite scroll and faceting in the component dialog.
+
+**Build note:** `ui.apps` runs `npm install` during Maven build to vendor `@searchstax-inc/searchstudio-ux-js` into `clientlib-search-ux-vendor`.
+
 ### Not yet implemented
 
 - Full index **Run** button execution (UI present; service still returns HTTP 503)

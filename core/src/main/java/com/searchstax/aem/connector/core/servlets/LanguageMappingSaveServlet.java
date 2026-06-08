@@ -76,7 +76,7 @@ public class LanguageMappingSaveServlet extends SlingAllMethodsServlet {
             }
 
             config.setSearchStaxLanguage(MultifieldParseHelper.trimToEmpty(item.get("searchStaxLanguage")));
-            config.setEnabled(MultifieldParseHelper.isEnabled(item, "enabled"));
+            config.setEnabled(MultifieldParseHelper.isExplicitlyEnabled(item, "enabled"));
 
             mappings.add(config);
         }

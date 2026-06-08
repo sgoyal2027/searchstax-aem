@@ -1,0 +1,33 @@
+.searchstax-aem-search {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+}
+
+.searchstax-aem-search-layout {
+    display: grid;
+    gap: 1.5rem;
+}
+
+@media (min-width: 992px) {
+    .searchstax-aem-search-layout {
+        grid-template-columns: 260px 1fr;
+        align-items: start;
+    }
+}
+
+.searchstax-aem-search-error {
+    border: 1px solid #f5c2c7;
+    background: #f8d7da;
+    color: #842029;
+    padding: 1rem 1.25rem;
+    border-radius: 4px;
+}
+
+.searchstax-aem-search-error p {
+    margin: 0 0 0.5rem;
+}
+
+.searchstax-aem-search-error p:last-child {
+    margin-bottom: 0;
+}

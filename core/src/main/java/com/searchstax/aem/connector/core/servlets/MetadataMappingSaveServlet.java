@@ -69,10 +69,14 @@ public class MetadataMappingSaveServlet extends SlingAllMethodsServlet {
 
             final MetadataFieldMappingConfig config = new MetadataFieldMappingConfig();
             config.setAemField(mappingType);
-            config.setCustomProperty(item.get("customProperty"));
+            if ("custom".equalsIgnoreCase(mappingType)) {
+                config.setCustomProperty(MultifieldParseHelper.trimToEmpty(item.get("customProperty")));
+            } else {
+                config.setCustomProperty("");
+            }
             config.setSearchStaxField(item.get("indexFieldName"));
             config.setType(item.get("fieldType"));
-            config.setEnabled(MultifieldParseHelper.isEnabled(item, "enabled"));
+            config.setEnabled(MultifieldParseHelper.isExplicitlyEnabled(item, "enabled"));
 
             mappings.add(config);
         }

@@ -92,6 +92,14 @@ public final class MultifieldParseHelper {
         return CompositeMultifieldParser.isChecked(item, property);
     }
 
+    /**
+     * Returns {@code true} only when the checkbox was explicitly submitted as checked.
+     * Missing or unchecked values are treated as disabled.
+     */
+    public static boolean isExplicitlyEnabled(final Map<String, String> item, final String property) {
+        return CompositeMultifieldParser.isChecked(item, property);
+    }
+
     public static String trimToEmpty(final String value) {
         return value == null ? "" : value.trim();
     }

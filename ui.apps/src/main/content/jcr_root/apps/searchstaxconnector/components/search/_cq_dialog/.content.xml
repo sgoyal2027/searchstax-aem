@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jcr:root xmlns:sling="http://sling.apache.org/jcr/sling/1.0" xmlns:granite="http://www.adobe.com/jcr/granite/1.0" xmlns:cq="http://www.day.com/jcr/cq/1.0" xmlns:jcr="http://www.jcp.org/jcr/1.0" xmlns:nt="http://www.jcp.org/jcr/nt/1.0"
+    jcr:primaryType="nt:unstructured"
+    jcr:title="SearchStax Search"
+    sling:resourceType="cq/gui/components/authoring/dialog">
+    <content
+        jcr:primaryType="nt:unstructured"
+        sling:resourceType="granite/ui/components/coral/foundation/container">
+        <items jcr:primaryType="nt:unstructured">
+            <tabs
+                jcr:primaryType="nt:unstructured"
+                sling:resourceType="granite/ui/components/coral/foundation/tabs"
+                maximized="{Boolean}true">
+                <items jcr:primaryType="nt:unstructured">
+                    <search
+                        jcr:primaryType="nt:unstructured"
+                        jcr:title="Search"
+                        sling:resourceType="granite/ui/components/coral/foundation/container"
+                        margin="{Boolean}true">
+                        <items jcr:primaryType="nt:unstructured">
+                            <languageOverride
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                fieldLabel="Language override"
+                                fieldDescription="Optional SearchStax language code. Leave blank to resolve from the current page and Language Mapping wizard."
+                                name="./languageOverride"/>
+                            <searchInputPlaceholder
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/textfield"
+                                fieldLabel="Search placeholder"
+                                name="./searchInputPlaceholder"
+                                value="Search..."/>
+                            <renderMethod
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                fieldLabel="Results rendering"
+                                name="./renderMethod">
+                                <items jcr:primaryType="nt:unstructured">
+                                    <pagination
+                                        jcr:primaryType="nt:unstructured"
+                                        text="Pagination"
+                                        value="pagination"
+                                        selected="{Boolean}true"/>
+                                    <infiniteScroll
+                                        jcr:primaryType="nt:unstructured"
+                                        text="Infinite scroll"
+                                        value="infiniteScroll"/>
+                                </items>
+                            </renderMethod>
+                            <facetingType
+                                jcr:primaryType="nt:unstructured"
+                                sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                fieldLabel="Faceting type"
+                                name="./facetingType">
+                                <items jcr:primaryType="nt:unstructured">
+                                    <and
+                                        jcr:primaryType="nt:unstructured"
+                                        text="AND"
+                                        value="and"
+                                        selected="{Boolean}true"/>
+                                    <or
+                                        jcr:primaryType="nt:unstructured"
+                                        text="OR"
+                                        value="or"/>
+                                    <tabs
+                                        jcr:primaryType="nt:unstructured"
+                                        text="Tabs"
+                                        value="tabs"/>
+                                </items>
+                            </facetingType>
+                        </items>
+                    </search>
+                </items>
+            </tabs>
+        </items>
+    </content>
+</jcr:root>
