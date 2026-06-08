@@ -104,6 +104,27 @@ public final class MultifieldParseHelper {
         return value == null ? "" : value.trim();
     }
 
+    public static boolean hasRowDataBesides(
+            final Map<String, String> item,
+            final String primaryField) {
+
+        if (item == null || item.isEmpty()) {
+            return false;
+        }
+
+        for (final Map.Entry<String, String> entry : item.entrySet()) {
+            if (primaryField != null && primaryField.equals(entry.getKey())) {
+                continue;
+            }
+            final String value = entry.getValue();
+            if (value != null && !value.isBlank()) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     public static String[] getStringArrayParameter(
             final SlingHttpServletRequest request,
             final String fieldName) {

@@ -31,9 +31,35 @@
 
         SearchStaxConfigUtil.attachSaveHandlers(
             "/bin/searchstaxconnector/wizard/metadata-field-mappings",
-            "Metadata mappings saved successfully."
+            "Metadata mappings saved successfully.",
+            validateMetadataMappingsForm
         );
     });
+
+    function validateMetadataMappingsForm() {
+        var items = document.querySelectorAll("coral-multifield-item");
+        var rowNumber;
+
+        for (rowNumber = 0; rowNumber < items.length; rowNumber++) {
+            var item = items[rowNumber];
+            var mappingType = item.querySelector("coral-select[name*='mappingType']");
+            var mappingValue = mappingType ? (mappingType.value || "").trim() : "";
+
+            if (!mappingValue) {
+                return "Please select an AEM metadata field for mapping row " + (rowNumber + 1) + ".";
+            }
+
+            if (mappingValue === "custom" && !readTextFieldValue(item, "customProperty")) {
+                return "Please enter a custom AEM metadata field for mapping row " + (rowNumber + 1) + ".";
+            }
+
+            if (!readTextFieldValue(item, "indexFieldName")) {
+                return "Please enter a SearchStax index field name for mapping row " + (rowNumber + 1) + ".";
+            }
+        }
+
+        return null;
+    }
 
 
     // ======================================================
@@ -76,6 +102,70 @@
         }
     }
 
+    function readTextFieldValue(item, nameFragment) {
+        if (!item) {
+            return "";
+        }
+
+        var coralField = item.querySelector("coral-textfield[name*='" + nameFragment + "']");
+        if (coralField && coralField.value) {
+            return String(coralField.value).trim();
+        }
+
+        var input = item.querySelector("input[name*='" + nameFragment + "']");
+        return input ? String(input.value || "").trim() : "";
+    }
+
+    function getMetadataMappingKey(item) {
+        var mappingType = item.querySelector("coral-select[name*='mappingType']");
+        if (!mappingType || !mappingType.value) {
+            return null;
+        }
+
+        if (mappingType.value === "custom") {
+            var customProperty = readTextFieldValue(item, "customProperty");
+            return customProperty ? "custom:" + customProperty : null;
+        }
+
+        return mappingType.value;
+    }
+
+    function getUsedMetadataKeys(excludeItem) {
+        var used = {};
+
+        $("coral-multifield-item").each(function () {
+            if (excludeItem && this === excludeItem) {
+                return;
+            }
+            var key = getMetadataMappingKey(this);
+            if (key) {
+                used[key] = true;
+            }
+        });
+
+        return used;
+    }
+
+    function isDuplicateMetadataKey(item, candidateKey) {
+        if (!candidateKey) {
+            return false;
+        }
+        return getUsedMetadataKeys(item)[candidateKey] === true;
+    }
+
+    function refreshMetadataMappingTypeOptions() {
+        $("coral-multifield-item").each(function () {
+            var item = this;
+            var mappingType = item.querySelector("coral-select[name*='mappingType']");
+            if (!mappingType) {
+                return;
+            }
+
+            var used = getUsedMetadataKeys(item);
+            SearchStaxConfigUtil.setSelectOptionsDisabled(mappingType, used, mappingType.value);
+        });
+    }
+
     function syncCustomFieldVisibility(item, showCustom) {
         var customProperty = item.querySelector("input[name*='customProperty'], coral-textfield[name*='customProperty']");
         var container = customProperty ? customProperty.closest("div") : null;
@@ -107,7 +197,6 @@
         SearchStaxConfigUtil.setEnabledSelect(item, false);
 
         var mappingType = item.querySelector("coral-select[name*='mappingType']");
-        var indexFieldName = item.querySelector("input[name*='indexFieldName'], coral-textfield[name*='indexFieldName']");
 
         if (!mappingType) {
             return;
@@ -115,24 +204,13 @@
 
         Coral.commons.ready(mappingType, function () {
 
-            var value = mappingType.value;
+            var value = mappingType.value || "";
 
-            if (!value && mappingType.items && mappingType.items.length > 0) {
-                value = mappingType.items.getAll()[0].value;
-                mappingType.value = value;
-            }
+            item.__lastMappingType = value;
+            item.__lastCustomProperty = readTextFieldValue(item, "customProperty");
 
             handleMappingTypeChange(item, true);
-
-            if (value === "custom") {
-                return;
-            }
-
-            if (indexFieldName && !indexFieldName.value) {
-                setTextFieldValue(item, "indexFieldName", formatIndexFieldName(value));
-            }
-
-            suggestFieldTypeForMapping(item, value);
+            refreshMetadataMappingTypeOptions();
         });
     }
 
@@ -201,6 +279,10 @@
                     }
 
                     SearchStaxConfigUtil.setEnabledSelect(item, mapping.enabled);
+
+                    item.__lastMappingType = mapping.aemField || "";
+                    item.__lastCustomProperty = isCustom ? (mapping.customProperty || "") : "";
+                    refreshMetadataMappingTypeOptions();
                 }
 
                 if (mappingType) {
@@ -233,6 +315,11 @@
 
         var value = mappingType.value;
         var isCustom = value === "custom";
+
+        if (!value) {
+            syncCustomFieldVisibility(item, false);
+            return;
+        }
 
         syncCustomFieldVisibility(item, isCustom);
 
@@ -271,10 +358,45 @@
         if (this.__initTriggered) {
             this.__initTriggered = false;
             handleMappingTypeChange(item, true);
+            refreshMetadataMappingTypeOptions();
             return;
         }
 
+        var selectedValue = this.value;
+        if (selectedValue && selectedValue !== "custom" &&
+                isDuplicateMetadataKey(item, selectedValue)) {
+            SearchStaxConfigUtil.showDuplicateWarning(
+                "This AEM metadata field is already mapped in another row.");
+            this.value = item.__lastMappingType || "";
+            return;
+        }
+
+        item.__lastMappingType = selectedValue || "";
         handleMappingTypeChange(item, false);
+        refreshMetadataMappingTypeOptions();
+    });
+
+    $(document).on("change input", "input[name*='customProperty'], coral-textfield[name*='customProperty']", function () {
+        var item = $(this).closest("coral-multifield-item")[0];
+        if (!item || __MF_INITIAL_LOAD) {
+            return;
+        }
+
+        var mappingType = item.querySelector("coral-select[name*='mappingType']");
+        if (!mappingType || mappingType.value !== "custom") {
+            return;
+        }
+
+        var candidateKey = getMetadataMappingKey(item);
+        if (candidateKey && isDuplicateMetadataKey(item, candidateKey)) {
+            SearchStaxConfigUtil.showDuplicateWarning(
+                "This custom AEM metadata field is already mapped in another row.");
+            setTextFieldValue(item, "customProperty", item.__lastCustomProperty || "");
+            return;
+        }
+
+        item.__lastCustomProperty = readTextFieldValue(item, "customProperty");
+        refreshMetadataMappingTypeOptions();
     });
 
     $(document).on("click", "[coral-multifield-add]", function () {
@@ -288,6 +410,10 @@
             }
 
         }, 500);
+    });
+
+    $(document).on("click", "[coral-multifield-remove]", function () {
+        setTimeout(refreshMetadataMappingTypeOptions, 300);
     });
 
 })(Granite.$, document);

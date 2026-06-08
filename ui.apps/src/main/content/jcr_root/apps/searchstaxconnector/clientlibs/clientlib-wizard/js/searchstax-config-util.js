@@ -65,6 +65,78 @@
         }
     };
 
+    window.SearchStaxConfigUtil.showDuplicateWarning = function (message) {
+        var ui = window.$ && $(window).adaptTo("foundation-ui");
+        if (ui) {
+            ui.alert("Duplicate selection", message, "warning");
+        }
+    };
+
+    window.SearchStaxConfigUtil.showValidationError = function (message) {
+        var ui = window.$ && $(window).adaptTo("foundation-ui");
+        if (ui) {
+            ui.alert("Validation Failed", message, "error");
+        }
+    };
+
+    window.SearchStaxConfigUtil.attachFormValidation = function (validateBeforeSave) {
+        if (typeof validateBeforeSave !== "function") {
+            return;
+        }
+
+        var form = document.getElementById("edit-configuration-properties-form");
+        if (!form || form.__searchstaxValidateBeforeSave) {
+            return;
+        }
+
+        form.__searchstaxValidateBeforeSave = validateBeforeSave;
+        form.addEventListener("submit", function (event) {
+            var message = form.__searchstaxValidateBeforeSave();
+            if (message) {
+                event.preventDefault();
+                event.stopImmediatePropagation();
+                window.SearchStaxConfigUtil.showValidationError(message);
+                return false;
+            }
+        }, true);
+    };
+
+    window.SearchStaxConfigUtil.setSelectOptionsDisabled = function (select, usedValues, currentValue) {
+        if (!select) {
+            return;
+        }
+
+        function apply() {
+            var options = select.items ? select.items.getAll() : [];
+            for (var i = 0; i < options.length; i++) {
+                var option = options[i];
+                var value = option.value;
+                if (!value) {
+                    continue;
+                }
+                option.disabled = usedValues[value] === true && value !== currentValue;
+            }
+        }
+
+        Coral.commons.ready(select, apply);
+    };
+
+    window.SearchStaxConfigUtil.firstAvailableSelectValue = function (select) {
+        if (!select || !select.items) {
+            return "";
+        }
+
+        var options = select.items.getAll();
+        for (var i = 0; i < options.length; i++) {
+            var option = options[i];
+            if (option.value && !option.disabled) {
+                return option.value;
+            }
+        }
+
+        return "";
+    };
+
     window.SearchStaxConfigUtil.setEnabledSelect = function (item, enabled) {
         if (!item) {
             return;
@@ -82,7 +154,9 @@
         });
     };
 
-    window.SearchStaxConfigUtil.attachSaveHandlers = function (saveUrl, successMessage) {
+    window.SearchStaxConfigUtil.attachSaveHandlers = function (saveUrl, successMessage, validateBeforeSave) {
+        window.SearchStaxConfigUtil.attachFormValidation(validateBeforeSave);
+
         $(document).ajaxSuccess(function (event, xhr, settings) {
             if (!window.SearchStaxConfigUtil.isServletRequest(settings.url, saveUrl)) {
                 return;

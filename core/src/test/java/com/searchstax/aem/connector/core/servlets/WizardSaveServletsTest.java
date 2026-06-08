@@ -253,6 +253,36 @@ class WizardSaveServletsTest {
     }
 
     @Test
+    void languageMappingSaveServletRejectsRowWithoutAemLanguageType() throws Exception {
+        context.request().setParameterMap(Map.of(
+                "languageMappings/item0/searchStaxLanguage", "en",
+                "languageMappings/item0/enabled", "true"));
+
+        final LanguageMappingSaveServlet servlet = activate(new LanguageMappingSaveServlet());
+        servlet.doPost(context.request(), context.response());
+
+        assertEquals(HttpServletResponse.SC_BAD_REQUEST, context.response().getStatus());
+        assertTrue(context.response().getOutputAsString().contains("AEM language is required"));
+    }
+
+    @Test
+    void languageMappingSaveServletRejectsDuplicateLanguages() throws Exception {
+        context.request().setParameterMap(Map.of(
+                "languageMappings/item0/aemLanguageType", "en",
+                "languageMappings/item0/searchStaxLanguage", "en",
+                "languageMappings/item0/enabled", "true",
+                "languageMappings/item1/aemLanguageType", "en",
+                "languageMappings/item1/searchStaxLanguage", "en",
+                "languageMappings/item1/enabled", "false"));
+
+        final LanguageMappingSaveServlet servlet = activate(new LanguageMappingSaveServlet());
+        servlet.doPost(context.request(), context.response());
+
+        assertEquals(HttpServletResponse.SC_BAD_REQUEST, context.response().getStatus());
+        assertTrue(context.response().getOutputAsString().contains("Duplicate language mapping"));
+    }
+
+    @Test
     void metadataMappingSaveServletPersistsMappings() throws Exception {
         context.request().setParameterMap(Map.of(
                 "metadataMappings/item0/mappingType", "jcr:title",
@@ -270,6 +300,39 @@ class WizardSaveServletsTest {
                 .get("metadataMappings", String.class);
         assertTrue(json.contains("\"aemField\":\"jcr:title\""));
         assertTrue(json.contains("\"enabled\":true"));
+    }
+
+    @Test
+    void metadataMappingSaveServletRejectsRowWithoutMappingType() throws Exception {
+        context.request().setParameterMap(Map.of(
+                "metadataMappings/item0/indexFieldName", "title",
+                "metadataMappings/item0/fieldType", "text",
+                "metadataMappings/item0/enabled", "true"));
+
+        final MetadataMappingSaveServlet servlet = activate(new MetadataMappingSaveServlet());
+        servlet.doPost(context.request(), context.response());
+
+        assertEquals(HttpServletResponse.SC_BAD_REQUEST, context.response().getStatus());
+        assertTrue(context.response().getOutputAsString().contains("AEM metadata field is required"));
+    }
+
+    @Test
+    void metadataMappingSaveServletRejectsDuplicatePresetMappings() throws Exception {
+        context.request().setParameterMap(Map.of(
+                "metadataMappings/item0/mappingType", "jcr:title",
+                "metadataMappings/item0/indexFieldName", "title",
+                "metadataMappings/item0/fieldType", "text",
+                "metadataMappings/item0/enabled", "true",
+                "metadataMappings/item1/mappingType", "jcr:title",
+                "metadataMappings/item1/indexFieldName", "title2",
+                "metadataMappings/item1/fieldType", "text",
+                "metadataMappings/item1/enabled", "false"));
+
+        final MetadataMappingSaveServlet servlet = activate(new MetadataMappingSaveServlet());
+        servlet.doPost(context.request(), context.response());
+
+        assertEquals(HttpServletResponse.SC_BAD_REQUEST, context.response().getStatus());
+        assertTrue(context.response().getOutputAsString().contains("Duplicate metadata field mapping"));
     }
 
     @Test
@@ -701,7 +764,7 @@ class WizardSaveServletsTest {
     }
 
     @Test
-    void languageMappingSaveServletSkipsBlankAemLanguageType() throws Exception {
+    void languageMappingSaveServletRejectsBlankAemLanguageTypeWhenRowHasData() throws Exception {
         context.request().setParameterMap(Map.of(
                 "languageMappings/item0/aemLanguageType", " ",
                 "languageMappings/item0/searchStaxLanguage", "abc"));
@@ -709,11 +772,8 @@ class WizardSaveServletsTest {
         final LanguageMappingSaveServlet servlet = activate(new LanguageMappingSaveServlet());
         servlet.doPost(context.request(), context.response());
 
-        assertEquals(HttpServletResponse.SC_OK, context.response().getStatus());
-        assertEquals("[]", context.resourceResolver()
-                .getResource(LanguageConfigServiceImpl.CONFIG_PATH)
-                .getValueMap()
-                .get("languageMappings", String.class));
+        assertEquals(HttpServletResponse.SC_BAD_REQUEST, context.response().getStatus());
+        assertTrue(context.response().getOutputAsString().contains("AEM language is required"));
     }
 
     @Test
@@ -788,7 +848,7 @@ class WizardSaveServletsTest {
     }
 
     @Test
-    void metadataMappingSaveServletSkipsBlankMappingType() throws Exception {
+    void metadataMappingSaveServletRejectsBlankMappingTypeWhenRowHasData() throws Exception {
         context.request().setParameterMap(Map.of(
                 "metadataMappings/item0/mappingType", " ",
                 "metadataMappings/item0/indexFieldName", "title"));
@@ -796,11 +856,8 @@ class WizardSaveServletsTest {
         final MetadataMappingSaveServlet servlet = activate(new MetadataMappingSaveServlet());
         servlet.doPost(context.request(), context.response());
 
-        assertEquals(HttpServletResponse.SC_OK, context.response().getStatus());
-        assertEquals("[]", context.resourceResolver()
-                .getResource("/conf/searchstaxconnector/settings/metadatafieldmapping")
-                .getValueMap()
-                .get("metadataMappings", String.class));
+        assertEquals(HttpServletResponse.SC_BAD_REQUEST, context.response().getStatus());
+        assertTrue(context.response().getOutputAsString().contains("AEM metadata field is required"));
     }
 
     @Test

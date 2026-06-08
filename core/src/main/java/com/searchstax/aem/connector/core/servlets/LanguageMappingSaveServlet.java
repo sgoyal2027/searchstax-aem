@@ -6,6 +6,7 @@ import com.searchstax.aem.connector.core.config.model.LanguageMappingConfig;
 import com.searchstax.aem.connector.core.utils.ConfigResourceUtil;
 import com.searchstax.aem.connector.core.utils.MultifieldParseHelper;
 import com.searchstax.aem.connector.core.utils.ResolverUtil;
+import com.searchstax.aem.connector.core.utils.WizardMappingDuplicateValidator;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.ModifiableValueMap;
@@ -61,10 +62,31 @@ public class LanguageMappingSaveServlet extends SlingAllMethodsServlet {
                         "enabled").entrySet()) {
 
             final Map<String, String> item = entry.getValue();
-            final String aemLanguageType = item.get("aemLanguageType");
+            final String aemLanguageType = MultifieldParseHelper.trimToEmpty(item.get("aemLanguageType"));
 
-            if (aemLanguageType == null || aemLanguageType.isBlank()) {
+            if (aemLanguageType.isEmpty()) {
+                if (MultifieldParseHelper.hasRowDataBesides(item, "aemLanguageType")) {
+                    JsonServletResponseUtil.writeBadRequest(
+                            response,
+                            "AEM language is required for each mapping row.");
+                    return;
+                }
                 continue;
+            }
+
+            if ("custom".equals(aemLanguageType)
+                    && MultifieldParseHelper.trimToEmpty(item.get("customAemLanguage")).isEmpty()) {
+                JsonServletResponseUtil.writeBadRequest(
+                        response,
+                        "Custom AEM language is required for custom language mappings.");
+                return;
+            }
+
+            if (MultifieldParseHelper.trimToEmpty(item.get("searchStaxLanguage")).isEmpty()) {
+                JsonServletResponseUtil.writeBadRequest(
+                        response,
+                        "SearchStax language is required for each mapping row.");
+                return;
             }
 
             final LanguageMappingConfig config = new LanguageMappingConfig();
@@ -79,6 +101,14 @@ public class LanguageMappingSaveServlet extends SlingAllMethodsServlet {
             config.setEnabled(MultifieldParseHelper.isExplicitlyEnabled(item, "enabled"));
 
             mappings.add(config);
+        }
+
+        final String duplicateKey = WizardMappingDuplicateValidator.findDuplicateLanguageKey(mappings);
+        if (duplicateKey != null) {
+            JsonServletResponseUtil.writeBadRequest(
+                    response,
+                    "Duplicate language mapping is not allowed: " + duplicateKey);
+            return;
         }
 
         try (ResourceResolver resolver = resolverUtil.getServiceResolver()) {

@@ -97,6 +97,8 @@
                                                                                         fieldLabel="AEM Language"
                                                                                         fieldDescription="Select the AEM language or locale code."
                                                                                         name="./aemLanguageType"
+                                                                                        emptyText="Select AEM language"
+                                                                                        required="{Boolean}true"
                                                                                         granite:class="cq-dialog-dropdown-showhide">
                                                                                         <granite:data
                                                                                             jcr:primaryType="nt:unstructured"

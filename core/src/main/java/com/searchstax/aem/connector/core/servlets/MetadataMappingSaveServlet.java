@@ -5,6 +5,7 @@ import com.searchstax.aem.connector.core.config.model.MetadataFieldMappingConfig
 import com.searchstax.aem.connector.core.utils.ConfigResourceUtil;
 import com.searchstax.aem.connector.core.utils.MultifieldParseHelper;
 import com.searchstax.aem.connector.core.utils.ResolverUtil;
+import com.searchstax.aem.connector.core.utils.WizardMappingDuplicateValidator;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.resource.ModifiableValueMap;
@@ -61,10 +62,31 @@ public class MetadataMappingSaveServlet extends SlingAllMethodsServlet {
                         "enabled").entrySet()) {
 
             final Map<String, String> item = entry.getValue();
-            final String mappingType = item.get("mappingType");
+            final String mappingType = MultifieldParseHelper.trimToEmpty(item.get("mappingType"));
 
-            if (mappingType == null || mappingType.isBlank()) {
+            if (mappingType.isEmpty()) {
+                if (MultifieldParseHelper.hasRowDataBesides(item, "mappingType")) {
+                    JsonServletResponseUtil.writeBadRequest(
+                            response,
+                            "AEM metadata field is required for each mapping row.");
+                    return;
+                }
                 continue;
+            }
+
+            if ("custom".equalsIgnoreCase(mappingType)
+                    && MultifieldParseHelper.trimToEmpty(item.get("customProperty")).isEmpty()) {
+                JsonServletResponseUtil.writeBadRequest(
+                        response,
+                        "Custom AEM metadata field is required for custom mappings.");
+                return;
+            }
+
+            if (MultifieldParseHelper.trimToEmpty(item.get("indexFieldName")).isEmpty()) {
+                JsonServletResponseUtil.writeBadRequest(
+                        response,
+                        "SearchStax index field name is required for each mapping row.");
+                return;
             }
 
             final MetadataFieldMappingConfig config = new MetadataFieldMappingConfig();
@@ -79,6 +101,14 @@ public class MetadataMappingSaveServlet extends SlingAllMethodsServlet {
             config.setEnabled(MultifieldParseHelper.isExplicitlyEnabled(item, "enabled"));
 
             mappings.add(config);
+        }
+
+        final String duplicateKey = WizardMappingDuplicateValidator.findDuplicateMetadataKey(mappings);
+        if (duplicateKey != null) {
+            JsonServletResponseUtil.writeBadRequest(
+                    response,
+                    "Duplicate metadata field mapping is not allowed: " + duplicateKey);
+            return;
         }
 
         try (ResourceResolver resolver = resolverUtil.getServiceResolver()) {
