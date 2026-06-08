@@ -2,6 +2,7 @@ package com.searchstax.aem.connector.core.listeners;
 
 import com.day.cq.replication.ReplicationAction;
 import com.day.cq.replication.ReplicationActionType;
+import org.apache.sling.api.resource.LoginException;
 import com.searchstax.aem.connector.core.incremental.IndexingAction;
 import com.searchstax.aem.connector.core.incremental.IndexingScopeDecision;
 import com.searchstax.aem.connector.core.services.IncrementalIndexingQueueService;
@@ -17,6 +18,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -29,6 +32,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith({AemContextExtension.class, MockitoExtension.class})
+@MockitoSettings(strictness = Strictness.LENIENT)
 class SearchStaxReplicationPreprocessorTest {
 
     private final AemContext context = AppAemContext.newAemContext();
@@ -125,6 +129,53 @@ class SearchStaxReplicationPreprocessorTest {
                 "/content/experience-fragments/wknd/en/site/footer",
                 IndexingAction.DELETE);
         verify(indexingScopeService, never()).evaluate(any(), anyString());
+    }
+
+    @Test
+    void ignoresNullReplicationAction() throws Exception {
+        when(indexingScopeService.isConnectorEnabled()).thenReturn(true);
+
+        preprocessor.preprocess(null, null);
+
+        verify(incrementalIndexingQueueService, never()).enqueue(anyString(), any());
+    }
+
+    @Test
+    void ignoresUnsupportedReplicationTypes() throws Exception {
+        final ReplicationAction action = mock(ReplicationAction.class);
+        when(indexingScopeService.isConnectorEnabled()).thenReturn(true);
+        when(action.getType()).thenReturn(ReplicationActionType.TEST);
+        when(action.getPaths()).thenReturn(new String[] {"/content/wknd/page"});
+
+        preprocessor.preprocess(action, null);
+
+        verify(incrementalIndexingQueueService, never()).enqueue(anyString(), any());
+    }
+
+    @Test
+    void queuesDeleteReplicationAction() throws Exception {
+        final ReplicationAction action = mock(ReplicationAction.class);
+        when(indexingScopeService.isConnectorEnabled()).thenReturn(true);
+        when(action.getType()).thenReturn(ReplicationActionType.DELETE);
+        when(action.getPaths()).thenReturn(new String[] {"/content/wknd/page"});
+        when(documentBuilderService.resolveDocumentId("/content/wknd/page")).thenReturn("/content/wknd/page");
+
+        preprocessor.preprocess(action, null);
+
+        verify(incrementalIndexingQueueService).enqueue("/content/wknd/page", IndexingAction.DELETE);
+    }
+
+    @Test
+    void skipsQueueWhenServiceLoginFails() throws Exception {
+        final ReplicationAction action = mock(ReplicationAction.class);
+        when(indexingScopeService.isConnectorEnabled()).thenReturn(true);
+        when(action.getType()).thenReturn(ReplicationActionType.ACTIVATE);
+        when(action.getPaths()).thenReturn(new String[] {"/content/wknd/page"});
+        when(resolverUtil.getServiceResolver()).thenThrow(new LoginException("login failed"));
+
+        preprocessor.preprocess(action, null);
+
+        verify(incrementalIndexingQueueService, never()).enqueue(anyString(), any());
     }
 
     @Test

@@ -25,4 +25,11 @@ class LanguageCodeNormalizerTest {
     void keepsBaseLanguageWhenAlreadyShort() {
         assertEquals("de", LanguageCodeNormalizer.baseLanguage("de"));
     }
+
+    @Test
+    void returnsEmptyForBlankLanguageCodes() {
+        assertEquals("", LanguageCodeNormalizer.normalize(null));
+        assertEquals("", LanguageCodeNormalizer.normalize("  "));
+        assertEquals("", LanguageCodeNormalizer.baseLanguage(null));
+    }
 }

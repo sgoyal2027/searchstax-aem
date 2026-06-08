@@ -2,6 +2,7 @@ package com.searchstax.aem.connector.core.utils;
 
 import com.adobe.granite.crypto.CryptoException;
 import com.adobe.granite.crypto.CryptoSupport;
+import com.searchstax.aem.connector.core.testcontext.TestReflection;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -48,15 +49,54 @@ class ProtectedValueCodecTest {
         assertTrue(target.looksEncrypted(PROTECTED));
     }
 
+    @Test
+    void returnsEmptyForNullOrBlankValues() {
+        final ProtectedValueCodec target = newCodec(cryptoSupport);
+
+        assertEquals("", target.unprotectIfNeeded(null));
+        assertEquals("", target.unprotectIfNeeded("  "));
+        assertFalse(target.looksEncrypted(null));
+    }
+
+    @Test
+    void returnsTrimmedValueWhenCryptoSupportUnavailable() {
+        final ProtectedValueCodec target = newCodec(null);
+
+        assertEquals("plain-token", target.unprotectIfNeeded(" plain-token "));
+    }
+
+    @Test
+    void attemptsUnprotectForProtectedBlobWhenNotMarkedProtected() throws CryptoException {
+        final ProtectedValueCodec target = newCodec(cryptoSupport);
+
+        when(cryptoSupport.isProtected(PROTECTED)).thenReturn(false);
+        when(cryptoSupport.unprotect(PROTECTED)).thenReturn("decrypted");
+
+        assertEquals("decrypted", target.unprotectIfNeeded(PROTECTED));
+    }
+
+    @Test
+    void returnsTrimmedValueWhenDecryptionFails() throws CryptoException {
+        final ProtectedValueCodec target = newCodec(cryptoSupport);
+
+        when(cryptoSupport.isProtected(PROTECTED)).thenReturn(true);
+        when(cryptoSupport.unprotect(PROTECTED)).thenThrow(new CryptoException("failed"));
+
+        assertEquals(PROTECTED, target.unprotectIfNeeded(PROTECTED));
+    }
+
+    @Test
+    void detectsEncryptedValueViaCryptoSupport() throws CryptoException {
+        final ProtectedValueCodec target = newCodec(cryptoSupport);
+
+        when(cryptoSupport.isProtected("protected-value")).thenReturn(true);
+
+        assertTrue(target.looksEncrypted("protected-value"));
+    }
+
     private static ProtectedValueCodec newCodec(final CryptoSupport cryptoSupport) {
         final ProtectedValueCodec target = new ProtectedValueCodec();
-        try {
-            final java.lang.reflect.Field field = ProtectedValueCodec.class.getDeclaredField("cryptoSupport");
-            field.setAccessible(true);
-            field.set(target, cryptoSupport);
-        } catch (ReflectiveOperationException e) {
-            throw new IllegalStateException(e);
-        }
+        TestReflection.inject(target, "cryptoSupport", cryptoSupport);
         return target;
     }
 }

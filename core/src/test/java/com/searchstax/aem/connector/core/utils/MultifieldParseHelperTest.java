@@ -11,6 +11,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @ExtendWith(AemContextExtension.class)
@@ -39,6 +40,32 @@ class MultifieldParseHelperTest {
     }
 
     @Test
+    void treatsExplicitDisabledFlagAsDisabled() {
+        final Map<String, String> item = new HashMap<>();
+        item.put("enabled", "false");
+
+        assertFalse(MultifieldParseHelper.isEnabled(item, "enabled"));
+    }
+
+    @Test
+    void returnsEnabledWhenItemIsNull() {
+        assertTrue(MultifieldParseHelper.isEnabled(null, "enabled"));
+    }
+
+    @Test
+    void readsStringArrayFromMultifieldItems() {
+        context.request().setParameterMap(Map.of(
+                "rootPaths/item0/./rootPaths",
+                new String[] {"/content/wknd"},
+                "rootPaths/item1/./rootPaths",
+                new String[] {"/content/other"}));
+
+        assertArrayEquals(
+                new String[] {"/content/wknd", "/content/other"},
+                MultifieldParseHelper.getStringArrayParameter(context.request(), "rootPaths"));
+    }
+
+    @Test
     void fallsBackToLegacyMultifieldParsing() {
         context.request().setParameterMap(Map.of(
                 "./allowedFiles/item0/./allowedFiles",
@@ -49,5 +76,13 @@ class MultifieldParseHelperTest {
 
         assertEquals(1, items.size());
         assertEquals("pdf", items.get(0).get("allowedFiles"));
+    }
+
+    @Test
+    void removeBlankValuesHandlesNullInput() {
+        // No parameters configured; request.getParameterValues(...) returns null.
+        assertArrayEquals(
+                new String[0],
+                MultifieldParseHelper.getStringArrayParameter(context.request(), "rootPaths"));
     }
 }

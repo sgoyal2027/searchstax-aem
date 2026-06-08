@@ -42,4 +42,40 @@ class CompositeMultifieldParserTest {
         assertTrue(CompositeMultifieldParser.isChecked(item, "enabled"));
         assertFalse(CompositeMultifieldParser.isChecked(item, "missing"));
     }
+
+    @Test
+    void treatsOnValueAsChecked() {
+        final Map<String, String> item = new HashMap<>();
+        item.put("enabled", "on");
+
+        assertTrue(CompositeMultifieldParser.isChecked(item, "enabled"));
+    }
+
+    @Test
+    void getValueReturnsNullForMissingInputs() {
+        assertEquals(null, CompositeMultifieldParser.getValue(null, "enabled"));
+        assertEquals(null, CompositeMultifieldParser.getValue(new HashMap<>(), null));
+    }
+
+    @Test
+    void skipsParametersWithNullValues() {
+        final Map<String, Object> params = new HashMap<>();
+        params.put("languageMappings/item0/./aemLanguageType", new String[] {null});
+        context.request().setParameterMap(params);
+
+        assertTrue(CompositeMultifieldParser.parse(context.request(), "languageMappings").isEmpty());
+    }
+
+    @Test
+    void parsesParametersWithAtSuffixInKey() {
+        context.request().setParameterMap(Map.of(
+                "includePaths/item0/./path@Delete",
+                new String[] {"/content/wknd"}));
+
+        final Map<Integer, Map<String, String>> items =
+                CompositeMultifieldParser.parse(context.request(), "includePaths");
+
+        assertEquals(1, items.size());
+        assertEquals("/content/wknd", items.get(0).get("path"));
+    }
 }

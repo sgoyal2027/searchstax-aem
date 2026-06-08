@@ -13,8 +13,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.apache.sling.api.resource.LoginException;
 import org.osgi.service.event.Event;
 
+import java.util.Collections;
 import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -84,6 +86,65 @@ class ReplicationIndexingEventHandlerTest {
 
         verify(incrementalIndexingQueueService).enqueue("/content/wknd/us/en/page", IndexingAction.INDEX);
         verify(incrementalIndexingQueueService, never()).enqueue("/conf/wknd-shared/settings", IndexingAction.INDEX);
+    }
+
+    @Test
+    void ignoresUnknownEventTypes() {
+        when(indexingScopeService.isConnectorEnabled()).thenReturn(true);
+
+        eventHandler.handleEvent(new Event(
+                "org/apache/sling/distribution/agent/package/distributed",
+                Map.of(
+                        "distribution.paths",
+                        new String[] {"/content/wknd/us/en/page"},
+                        "distribution.type",
+                        "TEST")));
+
+        verify(incrementalIndexingQueueService, never()).enqueue(any(), any());
+    }
+
+    @Test
+    void ignoresEventsWithoutPaths() {
+        when(indexingScopeService.isConnectorEnabled()).thenReturn(true);
+
+        eventHandler.handleEvent(new Event(
+                "org/apache/sling/distribution/agent/package/distributed",
+                Collections.singletonMap("distribution.type", "ACTIVATE")));
+
+        verify(incrementalIndexingQueueService, never()).enqueue(any(), any());
+    }
+
+    @Test
+    void skipsQueueWhenServiceLoginFails() throws Exception {
+        when(indexingScopeService.isConnectorEnabled()).thenReturn(true);
+        when(resolverUtil.getServiceResolver()).thenThrow(new LoginException("login failed"));
+
+        eventHandler.handleEvent(new Event(
+                "org/apache/sling/distribution/agent/package/distributed",
+                Map.of(
+                        "distribution.paths",
+                        new String[] {"/content/wknd/us/en/page"},
+                        "distribution.type",
+                        "ACTIVATE")));
+
+        verify(incrementalIndexingQueueService, never()).enqueue(any(), any());
+    }
+
+    @Test
+    void enqueuesQueuedJobPaths() {
+        when(indexingScopeService.isConnectorEnabled()).thenReturn(true);
+        when(indexingScopeService.evaluate(any(), eq("/content/wknd/us/en/page")))
+                .thenReturn(IndexingScopeDecision.accept());
+
+        eventHandler.handleEvent(new Event(
+                "org/apache/sling/distribution/agent/package/distributed",
+                Map.of(
+                        "paths",
+                        new String[] {"/content/wknd/us/en/page"},
+                        "type",
+                        "ADD")));
+
+        verify(incrementalIndexingQueueService).enqueue("/content/wknd/us/en/page", IndexingAction.INDEX);
     }
 
     @Test

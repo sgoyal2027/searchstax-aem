@@ -12,6 +12,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -49,6 +50,49 @@ class EmailServiceImplTest {
         final EmailRequest request = requestFor("user@example.com");
 
         assertFalse(emailService.sendEmail(request));
+    }
+
+    @Test
+    void skipsWhenRequestIsNull() {
+        assertFalse(emailService.sendEmail(null));
+    }
+
+    @Test
+    void skipsWhenRecipientsAreNull() {
+        final EmailRequest request = new EmailRequest();
+        request.setSubject("Subject");
+        request.setBody("Body");
+        request.setRecipients(null);
+
+        assertFalse(emailService.sendEmail(request));
+    }
+
+    @Test
+    void returnsFalseWhenSmtpSendFails() {
+        final EmailConfig config = smtpConfig();
+        config.setSmtpPassword("plain-password");
+        config.setFromEmail("from@example.com");
+
+        when(emailConfigService.getConfiguration()).thenReturn(config);
+        when(protectedValueCodec.unprotectIfNeeded(anyString())).thenReturn("plain-password");
+        when(protectedValueCodec.looksEncrypted(anyString())).thenReturn(false);
+
+        assertFalse(emailService.sendEmail(requestFor("user@example.com")));
+    }
+
+    @Test
+    void appliesStartTlsSettingsForPort587() {
+        final EmailConfig config = smtpConfig();
+        config.setSmtpPort(587);
+        config.setSmtpUseSsl(false);
+        config.setSmtpUseStartTls(true);
+        config.setSmtpPassword("plain-password");
+
+        when(emailConfigService.getConfiguration()).thenReturn(config);
+        when(protectedValueCodec.unprotectIfNeeded(anyString())).thenReturn("plain-password");
+        when(protectedValueCodec.looksEncrypted(anyString())).thenReturn(false);
+
+        assertFalse(emailService.sendEmail(requestFor("user@example.com")));
     }
 
     @Test

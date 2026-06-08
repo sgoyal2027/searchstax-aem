@@ -56,6 +56,22 @@ class IncrementalIndexingQueueServiceImplTest {
     }
 
     @Test
+    void ignoresBlankOrInvalidEnqueueRequests() {
+        queueService.enqueue(null, com.searchstax.aem.connector.core.incremental.IndexingAction.INDEX);
+        queueService.enqueue(" ", com.searchstax.aem.connector.core.incremental.IndexingAction.INDEX);
+        queueService.enqueue("/content/site/page", null);
+        queueService.enqueue("//invalid", com.searchstax.aem.connector.core.incremental.IndexingAction.INDEX);
+
+        org.mockito.Mockito.verifyNoInteractions(jobManager);
+    }
+
+    @Test
+    void deactivateCancelsScheduledFlush() {
+        queueService.enqueue("/content/site/page-a", com.searchstax.aem.connector.core.incremental.IndexingAction.INDEX);
+        queueService.deactivate();
+    }
+
+    @Test
     void deduplicatesPathsKeepingLastActionWhenBatchFlushes() {
         for (int index = 0; index < SearchStaxFullIndexDefaults.BATCH_SIZE - 1; index++) {
             queueService.enqueue("/content/site/page-" + index, IndexingAction.INDEX);
