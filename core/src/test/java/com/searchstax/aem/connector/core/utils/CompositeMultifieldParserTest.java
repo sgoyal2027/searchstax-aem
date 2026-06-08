@@ -67,6 +67,34 @@ class CompositeMultifieldParserTest {
     }
 
     @Test
+    void prefersCheckedValueWhenCheckboxSubmitsMultipleValues() {
+        context.request().setParameterMap(Map.of(
+                "metadataMappings/item0/./enabled",
+                new String[] {"false", "true"}));
+
+        final Map<Integer, Map<String, String>> items =
+                CompositeMultifieldParser.parse(context.request(), "metadataMappings");
+
+        assertEquals(1, items.size());
+        assertEquals("true", items.get(0).get("enabled"));
+        assertTrue(CompositeMultifieldParser.isChecked(items.get(0), "enabled"));
+    }
+
+    @Test
+    void parsesUncheckedCheckboxValue() {
+        context.request().setParameterMap(Map.of(
+                "metadataMappings/item0/./enabled",
+                new String[] {"false"}));
+
+        final Map<Integer, Map<String, String>> items =
+                CompositeMultifieldParser.parse(context.request(), "metadataMappings");
+
+        assertEquals(1, items.size());
+        assertEquals("false", items.get(0).get("enabled"));
+        assertFalse(CompositeMultifieldParser.isChecked(items.get(0), "enabled"));
+    }
+
+    @Test
     void parsesParametersWithAtSuffixInKey() {
         context.request().setParameterMap(Map.of(
                 "includePaths/item0/./path@Delete",

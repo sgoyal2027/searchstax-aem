@@ -280,12 +280,22 @@
                                                                                     </fieldType>
                                                                                     <enabled
                                                                                         jcr:primaryType="nt:unstructured"
-                                                                                        sling:resourceType="granite/ui/components/coral/foundation/form/checkbox"
-                                                                                        text="Enable Field Mapping"
+                                                                                        sling:resourceType="granite/ui/components/coral/foundation/form/select"
+                                                                                        fieldLabel="Enable Field Mapping"
                                                                                         fieldDescription="Enable or disable this metadata mapping."
                                                                                         name="./enabled"
-                                                                                        value="true"
-                                                                                        uncheckedValue="false"/>
+                                                                                        emptyText="Select status">
+                                                                                        <items jcr:primaryType="nt:unstructured">
+                                                                                            <enabledOption
+                                                                                                jcr:primaryType="nt:unstructured"
+                                                                                                text="Enabled"
+                                                                                                value="true"/>
+                                                                                            <disabledOption
+                                                                                                jcr:primaryType="nt:unstructured"
+                                                                                                text="Disabled"
+                                                                                                value="false"/>
+                                                                                        </items>
+                                                                                    </enabled>
                                                                                 </items>
                                                                             </field>
                                                                         </metadataMappings>

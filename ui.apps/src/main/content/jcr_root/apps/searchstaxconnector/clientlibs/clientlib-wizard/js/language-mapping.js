@@ -53,6 +53,8 @@
 
     function initializeMultifieldItem(item) {
 
+        SearchStaxConfigUtil.setEnabledSelect(item, false);
+
         var aemLanguageType = item.querySelector("coral-select[name*='aemLanguageType']");
         var customAemLanguage = item.querySelector("input[name*='customAemLanguage']");
         var searchStaxLanguage = item.querySelector("input[name*='searchStaxLanguage']");
@@ -99,6 +101,8 @@
             return;
         }
 
+        SearchStaxConfigUtil.clearMultifield(multifield);
+
         mappings.forEach(function (mapping, index) {
 
             multifield.items.add();
@@ -115,7 +119,6 @@
                 var aemLanguageType = item.querySelector("coral-select[name*='aemLanguageType']");
                 var customAemLanguage = item.querySelector("input[name*='customAemLanguage']");
                 var searchStaxLanguage = item.querySelector("input[name*='searchStaxLanguage']");
-                var enabled = item.querySelector("input[type='checkbox']");
                 var resolvedType = resolveAemLanguageType(mapping.aemLanguage);
 
                 if (searchStaxLanguage) {
@@ -136,9 +139,7 @@
                     });
                 }
 
-                if (enabled) {
-                    enabled.checked = mapping.enabled === true;
-                }
+                SearchStaxConfigUtil.setEnabledSelect(item, mapping.enabled);
 
             }, 50);
         });

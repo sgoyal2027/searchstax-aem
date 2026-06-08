@@ -273,6 +273,26 @@ class WizardSaveServletsTest {
     }
 
     @Test
+    void metadataMappingSaveServletPersistsCustomPropertyForCustomField() throws Exception {
+        context.request().setParameterMap(Map.of(
+                "metadataMappings/item0/mappingType", "custom",
+                "metadataMappings/item0/customProperty", "myproject:seoTitle",
+                "metadataMappings/item0/indexFieldName", "seo_title",
+                "metadataMappings/item0/fieldType", "text",
+                "metadataMappings/item0/enabled", "true"));
+
+        final MetadataMappingSaveServlet servlet = activate(new MetadataMappingSaveServlet());
+        servlet.doPost(context.request(), context.response());
+
+        final String json = context.resourceResolver()
+                .getResource("/conf/searchstaxconnector/settings/metadatafieldmapping")
+                .getValueMap()
+                .get("metadataMappings", String.class);
+        assertTrue(json.contains("\"aemField\":\"custom\""));
+        assertTrue(json.contains("\"customProperty\":\"myproject:seoTitle\""));
+    }
+
+    @Test
     void metadataMappingSaveServletClearsCustomPropertyForPresetField() throws Exception {
         context.request().setParameterMap(Map.of(
                 "metadataMappings/item0/mappingType", "jcr:description",
@@ -290,6 +310,24 @@ class WizardSaveServletsTest {
                 .get("metadataMappings", String.class);
         assertTrue(json.contains("\"aemField\":\"jcr:description\""));
         assertTrue(json.contains("\"customProperty\":\"\""));
+    }
+
+    @Test
+    void metadataMappingSaveServletPersistsExplicitlyDisabledEnabled() throws Exception {
+        context.request().setParameterMap(Map.of(
+                "metadataMappings/item0/mappingType", "jcr:title",
+                "metadataMappings/item0/indexFieldName", "title",
+                "metadataMappings/item0/fieldType", "text",
+                "metadataMappings/item0/enabled", "false"));
+
+        final MetadataMappingSaveServlet servlet = activate(new MetadataMappingSaveServlet());
+        servlet.doPost(context.request(), context.response());
+
+        final String json = context.resourceResolver()
+                .getResource("/conf/searchstaxconnector/settings/metadatafieldmapping")
+                .getValueMap()
+                .get("metadataMappings", String.class);
+        assertTrue(json.contains("\"enabled\":false"));
     }
 
     @Test

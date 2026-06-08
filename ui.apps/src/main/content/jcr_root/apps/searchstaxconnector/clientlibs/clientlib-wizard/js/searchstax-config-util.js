@@ -9,8 +9,7 @@
         }
 
         var path = String(requestUrl).split("?")[0];
-
-        return path === servletPath || path.endsWith(servletPath);
+        return path === servletPath;
     };
 
     window.SearchStaxConfigUtil.parseErrorMessage = function (xhr, defaultMessage) {
@@ -45,6 +44,42 @@
         }
 
         return defaultMessage;
+    };
+
+    window.SearchStaxConfigUtil.isTruthyEnabled = function (enabled) {
+        return enabled === true || enabled === "true" || enabled === 1 || enabled === "1";
+    };
+
+    window.SearchStaxConfigUtil.toEnabledValue = function (enabled) {
+        return window.SearchStaxConfigUtil.isTruthyEnabled(enabled) ? "true" : "false";
+    };
+
+    window.SearchStaxConfigUtil.clearMultifield = function (multifield) {
+        if (!multifield || !multifield.items) {
+            return;
+        }
+
+        var items = multifield.items.getAll();
+        for (var i = items.length - 1; i >= 0; i--) {
+            multifield.items.remove(items[i]);
+        }
+    };
+
+    window.SearchStaxConfigUtil.setEnabledSelect = function (item, enabled) {
+        if (!item) {
+            return;
+        }
+
+        var enabledSelect = item.querySelector("coral-select[name*='enabled']");
+        if (!enabledSelect) {
+            return;
+        }
+
+        var value = window.SearchStaxConfigUtil.toEnabledValue(enabled);
+        Coral.commons.ready(enabledSelect, function () {
+            enabledSelect.value = value;
+            enabledSelect.dispatchEvent(new Event("change", { bubbles: true }));
+        });
     };
 
     window.SearchStaxConfigUtil.attachSaveHandlers = function (saveUrl, successMessage) {

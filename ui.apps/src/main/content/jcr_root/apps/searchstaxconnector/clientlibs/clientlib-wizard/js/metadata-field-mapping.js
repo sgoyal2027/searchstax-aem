@@ -54,6 +54,37 @@
 
     var MULTI_VALUE_AEM_FIELDS = ["cq:tags", "dc:subject"];
 
+    function setTextFieldValue(item, nameFragment, value) {
+        if (!item) {
+            return;
+        }
+
+        var textValue = value || "";
+        var coralField = item.querySelector("coral-textfield[name*='" + nameFragment + "']");
+        var input = item.querySelector("input[name*='" + nameFragment + "']");
+
+        if (coralField) {
+            Coral.commons.ready(coralField, function () {
+                coralField.value = textValue;
+            });
+        }
+
+        if (input) {
+            input.value = textValue;
+            input.dispatchEvent(new Event("input", { bubbles: true }));
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+    }
+
+    function syncCustomFieldVisibility(item, showCustom) {
+        var customProperty = item.querySelector("input[name*='customProperty'], coral-textfield[name*='customProperty']");
+        var container = customProperty ? customProperty.closest("div") : null;
+
+        if (container) {
+            container.style.display = showCustom ? "block" : "none";
+        }
+    }
+
     function suggestFieldTypeForMapping(item, mappingValue) {
 
         var fieldType = item.querySelector("coral-select[name*='fieldType']");
@@ -73,9 +104,10 @@
 
     function initializeMultifieldItem(item) {
 
+        SearchStaxConfigUtil.setEnabledSelect(item, false);
+
         var mappingType = item.querySelector("coral-select[name*='mappingType']");
-        var customProperty = item.querySelector("input[name*='customProperty']");
-        var indexFieldName = item.querySelector("input[name*='indexFieldName']");
+        var indexFieldName = item.querySelector("input[name*='indexFieldName'], coral-textfield[name*='indexFieldName']");
 
         if (!mappingType) {
             return;
@@ -97,10 +129,7 @@
             }
 
             if (indexFieldName && !indexFieldName.value) {
-                indexFieldName.value = formatIndexFieldName(value);
-
-                indexFieldName.dispatchEvent(new Event("input", { bubbles: true }));
-                indexFieldName.dispatchEvent(new Event("change", { bubbles: true }));
+                setTextFieldValue(item, "indexFieldName", formatIndexFieldName(value));
             }
 
             suggestFieldTypeForMapping(item, value);
@@ -126,6 +155,8 @@
             return;
         }
 
+        SearchStaxConfigUtil.clearMultifield(multifield);
+
         mappings.forEach(function (mapping, index) {
 
             multifield.items.add();
@@ -141,64 +172,47 @@
 
                 var mappingType = item.querySelector("coral-select[name*='mappingType']");
                 var fieldType = item.querySelector("coral-select[name*='fieldType']");
-                var customProperty = item.querySelector("input[name*='customProperty']");
-                var indexFieldName = item.querySelector("input[name*='indexFieldName']");
-                var enabled = item.querySelector("input[type='checkbox']");
+                var isCustom = mapping.aemField === "custom";
 
-                // CUSTOM PROPERTY
-                if (customProperty) {
-                    customProperty.value = mapping.customProperty || "";
-                    customProperty.dispatchEvent(new Event("change", { bubbles: true }));
-                }
-
-                // INDEX FIELD (BACKEND VALUE)
-                if (indexFieldName) {
-                    indexFieldName.value = mapping.searchStaxField || "";
-
-                    indexFieldName.dispatchEvent(
-                        new Event("input", { bubbles: true })
+                function applyLoadedValues() {
+                    setTextFieldValue(
+                        item,
+                        "indexFieldName",
+                        mapping.searchStaxField || ""
                     );
+
+                    setTextFieldValue(
+                        item,
+                        "customProperty",
+                        isCustom ? (mapping.customProperty || "") : ""
+                    );
+
+                    syncCustomFieldVisibility(item, isCustom);
+
+                    if (fieldType) {
+                        Coral.commons.ready(fieldType, function () {
+                            var type = mapping.type || "text";
+                            if (type === "texts") {
+                                type = "strings";
+                            }
+                            fieldType.value = type;
+                            fieldType.dispatchEvent(new Event("change", { bubbles: true }));
+                        });
+                    }
+
+                    SearchStaxConfigUtil.setEnabledSelect(item, mapping.enabled);
                 }
 
-                // AEM FIELD DROPDOWN
                 if (mappingType) {
-
                     Coral.commons.ready(mappingType, function () {
-
                         mappingType.value = mapping.aemField;
-
                         mappingType.__initTriggered = true;
-
-                        mappingType.dispatchEvent(
-                            new Event("change", { bubbles: true })
-                        );
+                        applyLoadedValues();
+                        mappingType.dispatchEvent(new Event("change", { bubbles: true }));
                     });
+                } else {
+                    applyLoadedValues();
                 }
-
-                // FIELD TYPE DROPDOWN
-                if (fieldType) {
-
-                    Coral.commons.ready(fieldType, function () {
-
-                        var type = mapping.type || "text";
-                        if (type === "texts") {
-                            type = "strings";
-                        }
-
-                        fieldType.value = type;
-
-                        fieldType.dispatchEvent(
-                            new Event("change", { bubbles: true })
-                        );
-                    });
-                }
-
-                // ENABLED
-                if (enabled) {
-                    enabled.checked = mapping.enabled === true;
-                }
-
-                handleMappingTypeChange(item, true);
 
             }, 50);
         });
@@ -211,50 +225,34 @@
     function handleMappingTypeChange(item, isInitial) {
 
         var mappingType = item.querySelector("coral-select[name*='mappingType']");
-        var customProperty = item.querySelector("input[name*='customProperty']");
-        var indexFieldName = item.querySelector("input[name*='indexFieldName']");
+        var customProperty = item.querySelector("input[name*='customProperty'], coral-textfield[name*='customProperty']");
 
-        if (!mappingType) return;
-
-        var value = mappingType.value;
-
-        var container = customProperty
-            ? customProperty.closest("div")
-            : null;
-
-        // CUSTOM CASE
-        if (value === "custom") {
-
-            if (container) container.style.display = "block";
-
-            if (customProperty) customProperty.value = "";
-            if (indexFieldName) indexFieldName.value = "";
-
+        if (!mappingType) {
             return;
         }
 
-        if (container) container.style.display = "none";
+        var value = mappingType.value;
+        var isCustom = value === "custom";
 
-        if (customProperty) {
-            customProperty.value = "";
+        syncCustomFieldVisibility(item, isCustom);
+
+        if (isCustom) {
+            if (!isInitial) {
+                setTextFieldValue(item, "customProperty", "");
+                setTextFieldValue(item, "indexFieldName", "");
+            }
+            return;
         }
 
-        // INIT MODE → DO NOTHING
+        if (!isInitial && customProperty) {
+            setTextFieldValue(item, "customProperty", "");
+        }
+
         if (isInitial) {
             return;
         }
 
-        // USER MODE → APPLY TRANSFORM
-        var formattedValue = formatIndexFieldName(value);
-
-        if (indexFieldName) {
-
-            indexFieldName.value = formattedValue;
-
-            indexFieldName.dispatchEvent(new Event("input", { bubbles: true }));
-            indexFieldName.dispatchEvent(new Event("change", { bubbles: true }));
-        }
-
+        setTextFieldValue(item, "indexFieldName", formatIndexFieldName(value));
         suggestFieldTypeForMapping(item, value);
     }
 
@@ -270,7 +268,6 @@
             return;
         }
 
-        // ignore init-trigger events but still sync preset/custom fields
         if (this.__initTriggered) {
             this.__initTriggered = false;
             handleMappingTypeChange(item, true);
