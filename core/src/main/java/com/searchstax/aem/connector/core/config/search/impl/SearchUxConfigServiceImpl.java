@@ -9,7 +9,7 @@ import com.searchstax.aem.connector.core.config.search.SearchUxConfigService;
 import com.searchstax.aem.connector.core.config.search.SearchUxPublicConfig;
 import com.searchstax.aem.connector.core.incremental.AemLanguageResolver;
 import com.searchstax.aem.connector.core.services.SearchStaxConfigurationService;
-import org.apache.commons.lang3.StringUtils;
+import com.searchstax.aem.connector.core.utils.MultifieldParseHelper;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.api.resource.ResourceResolver;
@@ -49,7 +49,7 @@ public class SearchUxConfigServiceImpl implements SearchUxConfigService {
                 searchStaxConfigurationService.getSelectToken(),
                 searchStaxConfigurationService.getApiToken());
 
-        if (StringUtils.isBlank(searchUrl) || StringUtils.isBlank(searchAuth)) {
+        if (isBlank(searchUrl) || isBlank(searchAuth)) {
             config.setEnabled(false);
             config.setMessage("Search endpoint or credentials are not configured in API Configuration.");
             return config;
@@ -58,26 +58,26 @@ public class SearchUxConfigServiceImpl implements SearchUxConfigService {
         config.setEnabled(true);
         config.setLanguage(resolveLanguage(request));
         config.setSearchUrl(searchUrl.trim());
-        config.setSuggesterUrl(StringUtils.defaultString(searchStaxConfigurationService.getAutoSuggestApi()).trim());
+        config.setSuggesterUrl(MultifieldParseHelper.trimToEmpty(searchStaxConfigurationService.getAutoSuggestApi()));
         config.setSearchAuth(searchAuth.trim());
         config.setAuthType("token");
-        config.setTrackApiKey(StringUtils.defaultString(searchStaxConfigurationService.getAnalyticsTrackingKey()).trim());
+        config.setTrackApiKey(MultifieldParseHelper.trimToEmpty(searchStaxConfigurationService.getAnalyticsTrackingKey()));
         config.setRelatedSearchesUrl(
-                StringUtils.defaultString(searchStaxConfigurationService.getRelatedSearchesEndpoint()).trim());
+                MultifieldParseHelper.trimToEmpty(searchStaxConfigurationService.getRelatedSearchesEndpoint()));
         config.setRelatedSearchesApiKey(
-                StringUtils.defaultString(searchStaxConfigurationService.getDiscoveryApiKey()).trim());
+                MultifieldParseHelper.trimToEmpty(searchStaxConfigurationService.getDiscoveryApiKey()));
         config.setAnalyticsBaseUrl(
-                StringUtils.defaultString(searchStaxConfigurationService.getAnalyticsTrackingUrl()).trim());
+                MultifieldParseHelper.trimToEmpty(searchStaxConfigurationService.getAnalyticsTrackingUrl()));
         config.setForwardGeocodingEndpoint(
-                StringUtils.defaultString(searchStaxConfigurationService.getForwardGeocodingEndpoint()).trim());
+                MultifieldParseHelper.trimToEmpty(searchStaxConfigurationService.getForwardGeocodingEndpoint()));
         config.setReverseGeocodingEndpoint(
-                StringUtils.defaultString(searchStaxConfigurationService.getReverseGeocodingEndpoint()).trim());
+                MultifieldParseHelper.trimToEmpty(searchStaxConfigurationService.getReverseGeocodingEndpoint()));
         config.setMessage("");
         return config;
     }
 
     private String resolveLanguage(final SlingHttpServletRequest request) {
-        final String requestedLanguage = StringUtils.trimToEmpty(request.getParameter(PARAM_LANGUAGE));
+        final String requestedLanguage = MultifieldParseHelper.trimToEmpty(request.getParameter(PARAM_LANGUAGE));
         if (!requestedLanguage.isEmpty()) {
             return mapLanguage(requestedLanguage);
         }
@@ -106,14 +106,22 @@ public class SearchUxConfigServiceImpl implements SearchUxConfigService {
 
     private String mapLanguage(final String aemLanguage) {
         return languageConfigService.mapToSearchStaxLanguage(aemLanguage)
-                .filter(StringUtils::isNotBlank)
-                .orElse(StringUtils.defaultIfBlank(aemLanguage, "en"));
+                .filter(mapped -> mapped != null && !mapped.isBlank())
+                .orElseGet(() -> defaultIfBlank(aemLanguage, "en"));
     }
 
     private static String firstNonBlank(final String primary, final String fallback) {
-        if (StringUtils.isNotBlank(primary)) {
+        if (!isBlank(primary)) {
             return primary;
         }
-        return StringUtils.defaultString(fallback);
+        return fallback == null ? "" : fallback;
+    }
+
+    private static boolean isBlank(final String value) {
+        return value == null || value.isBlank();
+    }
+
+    private static String defaultIfBlank(final String value, final String defaultValue) {
+        return isBlank(value) ? defaultValue : value.trim();
     }
 }

@@ -1,7 +1,6 @@
 package com.searchstax.aem.connector.core.models;
 
 import com.searchstax.aem.connector.core.config.search.SearchStaxPublicBindingPaths;
-import org.apache.commons.lang3.StringUtils;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.resource.Resource;
 import org.apache.sling.models.annotations.DefaultInjectionStrategy;
@@ -32,22 +31,22 @@ public class SearchComponentModel {
 
     public String getConfigUrl() {
         final StringBuilder url = new StringBuilder(SearchStaxPublicBindingPaths.SERVLET_SEARCH_CONFIG);
-        if (StringUtils.isNotBlank(languageOverride)) {
+        if (languageOverride != null && !languageOverride.isBlank()) {
             url.append("?language=").append(languageOverride.trim());
         }
         return url.toString();
     }
 
     public String getRenderMethod() {
-        return StringUtils.defaultIfBlank(renderMethod, "pagination");
+        return defaultIfBlank(renderMethod, "pagination");
     }
 
     public String getFacetingType() {
-        return StringUtils.defaultIfBlank(facetingType, "and");
+        return defaultIfBlank(facetingType, "and");
     }
 
     public String getSearchInputPlaceholder() {
-        return StringUtils.defaultIfBlank(searchInputPlaceholder, "Search...");
+        return defaultIfBlank(searchInputPlaceholder, "Search...");
     }
 
     public String getComponentId() {
@@ -55,5 +54,9 @@ public class SearchComponentModel {
             return "searchstax-" + request.getResource().getPath().hashCode();
         }
         return "searchstax-search";
+    }
+
+    private static String defaultIfBlank(final String value, final String defaultValue) {
+        return value == null || value.isBlank() ? defaultValue : value;
     }
 }
