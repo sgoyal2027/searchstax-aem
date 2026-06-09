@@ -2,7 +2,17 @@
 
 Maven multi-module project for push-based indexing of AEM content to SearchStax Solr.
 
-**Primary target:** AEM **6.5.23** on-prem (Java **11+**). Also supports AMS and AEM as a Cloud Service (`-Pcloudservice`).
+**Primary target:** AEM **6.5.23** on-prem (Java **11+**). Also supports **AMS** and **AEM as a Cloud Service**.
+
+## Supported environments
+
+| Environment | Build command | Deploy | Notes |
+|-------------|---------------|--------|-------|
+| **AEM 6.5 on-prem** | `mvn clean install` | Package Manager or `-PautoInstallSinglePackage` | AEM JVM must be **Java 11+**. Delete `/apps/cq/core/content/nav` in CRXDE once if a prior install hit OakConstraint0025. |
+| **AMS** | `mvn clean install` | Same container package as 6.5 | AMS runs AEM 6.5 — use the **classic** (default) build. |
+| **AEM as a Cloud Service** | `mvn clean install -Pcloudservice` | Cloud Manager pipeline | Uses `aem-sdk-api` for compile; same OSGi bundle (`bnd.bnd`) with cross-version imports. |
+
+**One codebase** — the core bundle uses `version=0.0.0` imports, inlined `commons-email`, no JavaActivation contract, and `norequirements` so it resolves on 6.5, AMS, and Cloud.
 
 ## Modules
 
@@ -109,9 +119,17 @@ Also delete any orphan global **Apache Sling Servlet Resolver** config (PID with
 
 #### Author — Tools / Sites navigation overlay
 
-Older `ui.apps` packages used a **replace** filter on the full `/apps/cq/core/content/nav` tree with only SearchStax entries, which removed AEM's Sites/Assets overlay. Current packages replace only the **/apps** copy with `nav` → `tools` → `Searchstax` (`nt:unstructured`). **Sites**, **Assets**, and default **Tools** items still come from `/libs` at runtime.
+The connector uses **`merge` only** on `/apps/cq/.../nav` — it **does not replace** existing CQ navigation.
 
-Nav overlay nodetypes (matches AEM 6.5 `/libs` pattern):
+| What | Touched by this package? |
+|------|--------------------------|
+| `/libs/cq/core/content/nav` (Sites, Assets, default Tools) | **Never** — read-only product nav |
+| Other project's `/apps/cq/core/content/nav/*` overlays | **Not removed** — merge adds/updates only Searchstax nodes |
+| Searchstax entry | **Added** under `/apps/cq/core/content/nav/tools/searchstax` |
+
+At runtime AEM merges `/apps` over `/libs` (Sling Resource Merger). Sites, Assets, Operations, and any other Tools entries from `/libs` or other `/apps` overlays remain.
+
+Nav nodetypes (matches AEM `/libs` pattern):
 
 | Path | Nodetype |
 |------|----------|
