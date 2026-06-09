@@ -10,7 +10,7 @@
             jcr:primaryType="nt:unstructured"
             jcr:title="Initial Setup Configurations"
             href="/apps/searchstaxconnector/admin/wizards/initialsetup/wizard.html"
-            icon="settings"
+            icon="gear"
             id="initial-setup-wizard"/>
         <apiconfiguration
             jcr:primaryType="nt:unstructured"
@@ -38,7 +38,7 @@
             jcr:primaryType="nt:unstructured"
             jcr:title="Full Index Configurations"
             href="/apps/searchstaxconnector/admin/wizards/fullindexing/wizard.html"
-            icon="replay"
+            icon="refresh"
             id="full-index-wizard"/>
         <emailconfigurations
             jcr:description="Email Configurations"
