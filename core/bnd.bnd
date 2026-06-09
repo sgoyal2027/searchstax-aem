@@ -1,0 +1,44 @@
+# OSGi bundle for AEM 6.5.23+ (Java 11), AMS, and Cloud Service.
+-dsannotations-options: inherit,norequirements
+-runee: JavaSE-11
+Bundle-ActivationPolicy: eager
+
+# AEM 6.5 does not publish the JavaActivation OSGi contract; imports javax.activation from platform instead.
+-contract: !*
+
+# version=0.0.0 accepts any exported version on the target runtime (6.5, AMS, Cloud).
+Import-Package:\
+    javax.annotation;version=0.0.0,\
+    javax.servlet;version=0.0.0,\
+    javax.servlet.http;version=0.0.0,\
+    javax.jcr;version=0.0.0,\
+    javax.mail;version=0.0.0,\
+    javax.mail.internet;version=0.0.0,\
+    javax.mail.util;version=0.0.0,\
+    javax.activation;version=0.0.0,\
+    javax.naming;version=0.0.0,\
+    com.day.cq.replication;version=0.0.0,\
+    com.day.cq.wcm.api;version=0.0.0,\
+    com.adobe.granite.crypto;version=0.0.0,\
+    com.fasterxml.jackson.core;version=0.0.0,\
+    com.fasterxml.jackson.core.type;version=0.0.0,\
+    com.fasterxml.jackson.databind;version=0.0.0,\
+    com.fasterxml.jackson.databind.node;version=0.0.0,\
+    org.apache.sling.api;version=0.0.0,\
+    org.apache.sling.api.request;version=0.0.0,\
+    org.apache.sling.api.resource;version=0.0.0,\
+    org.apache.sling.api.servlets;version=0.0.0,\
+    org.apache.sling.commons.scheduler;version=0.0.0,\
+    org.apache.sling.event.jobs;version=0.0.0,\
+    org.apache.sling.event.jobs.consumer;version=0.0.0,\
+    org.apache.sling.models.annotations;version=0.0.0,\
+    org.apache.sling.models.annotations.injectorspecific;version=0.0.0,\
+    org.osgi.service.event;version=0.0.0,\
+    org.slf4j;version=0.0.0,\
+    !sun.security.util,\
+    !sun.security.x509,\
+    !org.apache.commons.mail.*,\
+    *
+
+# Apache Commons Email is not on AEM 6.5; javax.mail/activation come from platform bundles.
+-conditionalpackage: org.apache.commons.mail.*

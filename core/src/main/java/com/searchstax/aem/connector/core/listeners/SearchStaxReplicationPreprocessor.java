@@ -21,7 +21,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(service = Preprocessor.class, immediate = true)
+@Component(service = Preprocessor.class)
 public class SearchStaxReplicationPreprocessor implements Preprocessor {
 
     private static final Logger LOG = LoggerFactory.getLogger(SearchStaxReplicationPreprocessor.class);

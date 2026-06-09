@@ -11,7 +11,7 @@ import org.osgi.service.component.annotations.Reference;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Component(immediate = true)
+@Component
 public class IndexingAuditCleanupScheduler implements Runnable {
 
     private static final Logger LOG = LoggerFactory.getLogger(IndexingAuditCleanupScheduler.class);

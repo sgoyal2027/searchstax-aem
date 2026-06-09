@@ -19,7 +19,6 @@ import org.slf4j.LoggerFactory;
 
 @Component(
         service = EventHandler.class,
-        immediate = true,
         property = {
                 EventConstants.EVENT_TOPIC + "=org/apache/sling/distribution/agent/package/distributed"
         }

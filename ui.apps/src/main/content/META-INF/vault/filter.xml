@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <workspaceFilter version="1.0">
-    <filter root="/apps/cq/core/content/nav/tools" mode="merge"/>
+    <!-- cq/core/content = sling:Folder; nav/tools = nt:unstructured (matches AEM /libs overlay pattern). -->
+    <filter root="/apps/cq" mode="merge"/>
+    <filter root="/apps/cq/core" mode="merge"/>
+    <filter root="/apps/cq/core/content" mode="merge"/>
+    <filter root="/apps/cq/core/content/nav" mode="replace"/>
     <filter root="/apps/searchstaxconnector/clientlibs"/>
     <filter root="/apps/searchstaxconnector/i18n"/>
     <filter root="/apps/searchstaxconnector/admin"/>

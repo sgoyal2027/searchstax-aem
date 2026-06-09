@@ -1,6 +1,8 @@
 # SearchStax AEM Connector
 
-Maven multi-module project for push-based indexing of AEM content to SearchStax Solr. Supports AEM 6.5 on-prem, AMS, and AEM as a Cloud Service.
+Maven multi-module project for push-based indexing of AEM content to SearchStax Solr.
+
+**Primary target:** AEM **6.5.23** on-prem (Java **11+**). Also supports AMS and AEM as a Cloud Service (`-Pcloudservice`).
 
 ## Modules
 
@@ -14,32 +16,46 @@ Maven multi-module project for push-based indexing of AEM content to SearchStax 
 
 ## Prerequisites
 
-- JDK 11 or higher
+- **JDK 11 or higher** (matches AEM 6.5.23+ on Java 11)
 - Apache Maven 3.3.9 or higher
+- AEM 6.5.23 author instance (Java 11 JVM)
 
 ## Build
 
-**AEM as a Cloud Service (default):**
+**AEM 6.5 on-prem / AMS (default):**
 
 ```powershell
 mvn clean install
 ```
 
-**AEM 6.5 on-prem / AMS:**
+**AEM as a Cloud Service:**
 
 ```powershell
-mvn clean install -Pclassic
+mvn clean install -Pcloudservice
 ```
 
-## Deploy
+## Deploy to AEM 6.5.23
 
-Install the container package on the **author** instance:
+Install the container package on the **author** instance (adjust port if not 4502):
 
 ```powershell
-mvn clean install -PautoInstallSinglePackage
+mvn clean install -PautoInstallSinglePackage "-Daem.port=4505"
 ```
 
 Or upload `all/target/searchstax-aem-connector.all-1.0.0-SNAPSHOT.zip` via Package Manager.
+
+After install, verify the core bundle in `/system/console/bundles`:
+
+- **Symbolic name:** `searchstax-aem-connector.core`
+- **Status:** Active
+- **JavaSE:** 11 (requires AEM JVM on Java 11+)
+
+**Bundle stuck at Installed / Resolved (not Active):**
+
+1. Confirm AEM author runs on **Java 11+** (System Information in `/system/console/status-systeminfo`). A bundle built for Java 11 will not resolve on a Java 8 JVM.
+2. Reinstall the latest package, then click **Start** on `searchstax-aem-connector.core` in `/system/console/bundles`.
+3. Open bundle details → **Imports** — any red/unresolved import blocks activation. Common on 6.5: missing `javax.mail` or `javax.activation` platform bundles (install AEM 6.5.23 with full platform packages).
+4. Check `error.log` for `searchstax-aem-connector.core` or `SCR` lines after starting the bundle.
 
 ## Author configuration UI
 
@@ -93,15 +109,27 @@ Also delete any orphan global **Apache Sling Servlet Resolver** config (PID with
 
 #### Author — Tools / Sites navigation overlay
 
-Older `ui.apps` packages used a **replace** filter on `/apps/cq/core/content/nav`, which removed AEM's author navigation overlay (Sites, Assets, etc.). Only SearchStax tools remained under `/apps/cq/core/content/nav`.
+Older `ui.apps` packages used a **replace** filter on the full `/apps/cq/core/content/nav` tree with only SearchStax entries, which removed AEM's Sites/Assets overlay. Current packages replace only the **/apps** copy with `nav` → `tools` → `Searchstax` (`nt:unstructured`). **Sites**, **Assets**, and default **Tools** items still come from `/libs` at runtime.
 
-**Fix on author (4502):**
+Nav overlay nodetypes (matches AEM 6.5 `/libs` pattern):
 
-1. In **CRXDE Lite** (`/crx/de`), delete the node `/apps/cq/core/content/nav` (or run: `curl -u admin:admin -X POST http://localhost:4502/apps/cq/core/content/nav -F :operation=delete`).
-2. Reinstall the current connector package: `mvn clean install -PautoInstallSinglePackage`.
-3. Confirm `/mnt/overlay/cq/core/content/nav.infinity.json` lists **Sites**, **Assets**, and **Searchstax** under **Tools**.
+| Path | Nodetype |
+|------|----------|
+| `/apps/cq` | `sling:Folder` |
+| `/apps/cq/core` | `sling:Folder` |
+| `/apps/cq/core/content` | `sling:Folder` |
+| `/apps/cq/core/content/nav` | `nt:unstructured` |
+| `/apps/cq/core/content/nav/tools` | `nt:unstructured` |
 
-Current `ui.apps` only merges `/apps/cq/core/content/nav/tools` (SearchStax entries) and does not touch the parent nav node.
+**OakConstraint0025:** delete `/apps/cq/core/content/nav` in CRXDE Lite before reinstall if a prior install used wrong nodetypes (`nt:folder` instead of `sling:Folder`). Then reinstall the package.
+
+**If Searchstax Connector is missing under Tools after a successful install:**
+
+1. In **CRXDE Lite** (`/crx/de`), delete `/apps/cq/core/content/nav` if a prior install created it as `nt:folder` (causes OakConstraint0025).
+2. Reinstall: `mvn clean install -PautoInstallSinglePackage "-Daem.port=4502" "-Dmaven.test.skip=true"`
+3. Verify in CRXDE: `/apps/cq/core/content/nav/tools/searchstax` exists with child nodes (`initialsetup`, `apiconfiguration`, etc.).
+4. Verify JSON: `http://localhost:4502/mnt/overlay/cq/core/content/nav.infinity.json` — under `tools` look for `searchstax`.
+5. Hard-refresh the author UI (Ctrl+F5) — Granite caches nav.
 
 Current `ui.config` only ships **named** factory configs (`~searchstaxconnector`) and no longer includes the publish resource-resolver override.
 
