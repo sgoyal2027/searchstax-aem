@@ -301,4 +301,4 @@
 
    });
 
-})(document, Granite.$);
+})(document, window.Granite && window.Granite.$ ? window.Granite.$ : window.jQuery);

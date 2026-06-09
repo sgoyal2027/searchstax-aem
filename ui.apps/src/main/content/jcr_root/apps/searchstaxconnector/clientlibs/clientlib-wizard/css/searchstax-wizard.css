@@ -1,3 +1,15 @@
 .custom-field-showhide-target {
     display: none;
 }
+
+.searchstax-secret-update-row {
+    margin-top: 0.25rem;
+    margin-bottom: 0.625rem;
+}
+
+.searchstax-secret-update-row coral-button,
+.searchstax-secret-update-row button.coral-Button,
+.searchstax-secret-update-row button._coral-Button {
+    display: inline-block;
+    width: auto;
+}

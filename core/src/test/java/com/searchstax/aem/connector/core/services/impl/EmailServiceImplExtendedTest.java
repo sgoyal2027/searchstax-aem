@@ -5,9 +5,6 @@ import com.searchstax.aem.connector.core.config.model.EmailConfig;
 import com.searchstax.aem.connector.core.dto.request.EmailRequest;
 import com.searchstax.aem.connector.core.testcontext.TestReflection;
 import com.searchstax.aem.connector.core.utils.ProtectedValueCodec;
-import org.apache.commons.mail.EmailException;
-import org.apache.commons.mail.HtmlEmail;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,9 +13,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
+import javax.mail.MessagingException;
+import javax.net.ssl.SSLHandshakeException;
 import java.lang.reflect.Method;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -43,38 +41,49 @@ class EmailServiceImplExtendedTest {
         TestReflection.inject(emailService, "protectedValueCodec", protectedValueCodec);
     }
 
-    @AfterEach
-    void tearDown() {
-        // no-op
-    }
-
-    @Test
-    void appliesPlainSmtpSecurityWhenSslAndStartTlsDisabled() throws Exception {
-        final HtmlEmail email = new HtmlEmail();
-        final EmailConfig config = smtpConfig();
-        config.setSmtpPort(25);
-        config.setSmtpUseSsl(false);
-        config.setSmtpUseStartTls(false);
-
-        invokeApplySmtpSecurity(email, config);
-
-        assertFalse(email.isSSL());
-        assertFalse(email.isStartTLSEnabled());
-        assertFalse(email.isStartTLSRequired());
-    }
-
     @Test
     void resolveEmailErrorMessageMapsGmailAppPasswordHint() throws Exception {
-        final EmailException exception = new EmailException("Application-specific password required");
+        final MessagingException exception = new MessagingException("Application-specific password required");
 
         assertTrue(invokeResolveEmailErrorMessage(exception).contains("Google App Password"));
     }
 
     @Test
     void resolveEmailErrorMessageMapsAuthenticationFailures() throws Exception {
-        final EmailException exception = new EmailException("AuthenticationFailedException: 535");
+        final MessagingException exception = new MessagingException("AuthenticationFailedException: 535");
 
         assertTrue(invokeResolveEmailErrorMessage(exception).contains("SMTP authentication failed"));
+    }
+
+    @Test
+    void resolveEmailErrorMessageMapsTlsHandshakeFailures() throws Exception {
+        final MessagingException exception = new MessagingException(
+                "Could not convert socket to TLS",
+                new SSLHandshakeException("No appropriate protocol"));
+
+        assertTrue(invokeResolveEmailErrorMessage(exception).contains("SMTP TLS handshake failed"));
+        assertTrue(invokeResolveEmailErrorMessage(exception).contains("JavaMail"));
+    }
+
+    @Test
+    void storesLastSendErrorWhenSmtpPasswordCannotBeDecrypted() {
+        final EmailConfig config = smtpConfig();
+        config.setSmtpPassword("{encrypted}");
+
+        when(emailConfigService.getConfiguration()).thenReturn(config);
+        when(protectedValueCodec.unprotectIfNeeded(anyString())).thenReturn("{still-encrypted}");
+        when(protectedValueCodec.looksEncrypted("{still-encrypted}")).thenReturn(true);
+
+        assertFalse(emailService.sendEmail(requestFor("user@example.com")));
+        assertTrue(emailService.getLastSendError().contains("password"));
+    }
+
+    private EmailRequest requestFor(final String recipient) {
+        final EmailRequest request = new EmailRequest();
+        request.setSubject("Subject");
+        request.setBody("Body");
+        request.setRecipients(new String[] {recipient});
+        return request;
     }
 
     private EmailConfig smtpConfig() {
@@ -87,16 +96,9 @@ class EmailServiceImplExtendedTest {
         return config;
     }
 
-    private void invokeApplySmtpSecurity(final HtmlEmail email, final EmailConfig config) throws Exception {
-        final Method method = EmailServiceImpl.class.getDeclaredMethod("applySmtpSecurity", HtmlEmail.class, EmailConfig.class);
-        method.setAccessible(true);
-        method.invoke(emailService, email, config);
-    }
-
-    private String invokeResolveEmailErrorMessage(final EmailException exception) throws Exception {
-        final Method method = EmailServiceImpl.class.getDeclaredMethod("resolveEmailErrorMessage", EmailException.class);
+    private String invokeResolveEmailErrorMessage(final Exception exception) throws Exception {
+        final Method method = EmailServiceImpl.class.getDeclaredMethod("resolveEmailErrorMessage", Exception.class);
         method.setAccessible(true);
         return (String) method.invoke(emailService, exception);
     }
-
 }

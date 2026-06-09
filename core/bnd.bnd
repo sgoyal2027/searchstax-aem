@@ -12,10 +12,9 @@ Import-Package:\
     javax.servlet;version=0.0.0,\
     javax.servlet.http;version=0.0.0,\
     javax.jcr;version=0.0.0,\
-    javax.mail;version=0.0.0,\
-    javax.mail.internet;version=0.0.0,\
-    javax.mail.util;version=0.0.0,\
     javax.activation;version=0.0.0,\
+    !javax.mail.*,\
+    !com.sun.mail.*,\
     javax.naming;version=0.0.0,\
     com.day.cq.replication;version=0.0.0,\
     com.day.cq.wcm.api;version=0.0.0,\
@@ -37,8 +36,8 @@ Import-Package:\
     org.slf4j;version=0.0.0,\
     !sun.security.util,\
     !sun.security.x509,\
-    !org.apache.commons.mail.*,\
     *
 
-# Apache Commons Email is not on AEM 6.5; javax.mail/activation come from platform bundles.
--conditionalpackage: org.apache.commons.mail.*
+# JavaMail 1.6.2 is embedded; activation comes from the platform.
+-includeresource: @javax.mail-1.6.2.jar
+Embed-Dependency: javax.mail;groupId=com.sun.mail;inline=true

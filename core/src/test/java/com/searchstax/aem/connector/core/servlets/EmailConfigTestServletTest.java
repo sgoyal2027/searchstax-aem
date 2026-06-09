@@ -62,10 +62,12 @@ class EmailConfigTestServletTest {
     void returns500WhenEmailSendFails() throws Exception {
         when(emailConfigService.getReceiverAddresses()).thenReturn(new String[] {"ops@example.com"});
         when(emailService.sendEmail(any(EmailRequest.class))).thenReturn(false);
+        when(emailService.getLastSendError()).thenReturn("SMTP TLS handshake failed.");
 
         final EmailConfigTestServlet servlet = context.registerInjectActivateService(new EmailConfigTestServlet());
         servlet.doPost(context.request(), context.response());
 
         assertEquals(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, context.response().getStatus());
+        assertTrue(context.response().getOutputAsString().contains("SMTP TLS handshake failed"));
     }
 }

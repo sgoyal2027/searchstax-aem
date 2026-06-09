@@ -1,10 +1,15 @@
-$(document).ready(function () {
+(function (document, $) {
+    "use strict";
 
     if (!window.location.pathname.includes("apiconfig")) {
         return;
     }
 
-    var fields = [
+    var LOG = "[ApiConfig]";
+    var LOAD_PATH = "/bin/searchstaxconnector/wizard/api-config-load";
+    var SAVE_PATH = "/bin/searchstaxconnector/wizard/api-config-save";
+
+    var textFields = [
         "endpointUrl",
         "selectEndpoint",
         "updateEndpoint",
@@ -17,70 +22,104 @@ $(document).ready(function () {
         "reverseGeocodingEndpoint"
     ];
 
-    Coral.commons.ready(document, function () {
+    var secretFields = [
+        "apiToken",
+        "selectToken",
+        "updateToken",
+        "discoveryApiKey",
+        "analyticsTrackingKey",
+        "analyticsReportingApiKey"
+    ];
 
-        $.getJSON(
-            "/bin/searchstaxconnector/wizard/api-config-load",
-            function (data) {
-                fields.forEach(function (fieldName) {
-                    setFieldValue(fieldName, data[fieldName]);
-                });
+    function findField(name) {
+        if (window.SearchStaxConfigUtil && window.SearchStaxConfigUtil.findNamedField) {
+            return window.SearchStaxConfigUtil.findNamedField(name);
+        }
+
+        return document.querySelector("[name='" + name + "']");
+    }
+
+    function setFieldValue(name, value) {
+        var field = findField(name);
+        if (!field) {
+            console.warn(LOG, "Field not found:", name);
+            return;
+        }
+
+        var normalized = value === undefined || value === null ? "" : String(value);
+
+        Coral.commons.ready(field, function (el) {
+            if (el.value !== undefined) {
+                el.value = normalized;
             }
-        ).fail(function (xhr) {
-            console.error("[ApiConfig] Failed loading configuration", xhr);
-        });
-    });
 
-    function isSaveRequest(requestUrl, servletPath) {
-        if (!requestUrl) {
+            var inner = el.querySelector("input:not([type='hidden']), textarea");
+            if (inner) {
+                inner.value = normalized;
+            }
+
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+    }
+
+    function populateForm(data) {
+        if (!data) {
             return false;
         }
-        return requestUrl.split("?")[0].endsWith(servletPath);
+
+        var endpointField = findField("endpointUrl");
+        if (!endpointField) {
+            return false;
+        }
+
+        textFields.forEach(function (fieldName) {
+            setFieldValue(fieldName, data[fieldName]);
+        });
+
+        if (window.SearchStaxConfigUtil && window.SearchStaxConfigUtil.applySecretFieldStates) {
+            window.SearchStaxConfigUtil.applySecretFieldStates(data, secretFields, 0);
+        }
+
+        return true;
     }
 
-    var SAVE_PATH = "/bin/searchstaxconnector/wizard/api-config-save";
+    function loadConfiguration(attempt) {
+        attempt = attempt || 0;
 
-    $(document).ajaxSuccess(function (event, xhr, settings) {
-        if (!isSaveRequest(settings.url, SAVE_PATH)) {
-            return;
-        }
-
-        var ui = $(window).adaptTo("foundation-ui");
-        ui.notify("Success", "API configuration saved successfully.", "success");
-
-        setTimeout(function () {
-            window.location.href = "/aem/start.html";
-        }, 1500);
-    });
-
-    $(document).ajaxError(function (event, xhr, settings) {
-        if (!isSaveRequest(settings.url, SAVE_PATH)) {
-            return;
-        }
-
-        var message = "Unable to save API configuration.";
-        try {
-            var response = JSON.parse(xhr.responseText);
-            if (response.message) {
-                message = response.message;
+        $.getJSON(LOAD_PATH, function (data) {
+            if (!populateForm(data) && attempt < 10) {
+                setTimeout(function () {
+                    loadConfiguration(attempt + 1);
+                }, 200);
             }
-        } catch (e) {
-            console.error("[ApiConfig] Failed parsing error response", e);
-        }
-
-        var ui = $(window).adaptTo("foundation-ui");
-        ui.alert("Save Failed", message, "error");
-    });
-});
-
-function setFieldValue(name, value) {
-    var field = document.querySelector("[name='" + name + "']");
-    if (!field) {
-        return;
+        }).fail(function (xhr) {
+            console.error(LOG, "Failed loading configuration", xhr);
+        });
     }
-    Coral.commons.ready(field, function (el) {
-        if (el.value !== undefined) {
-            el.value = value || "";
+
+    function init() {
+        Coral.commons.ready(document, function () {
+            loadConfiguration(0);
+        });
+
+        if (window.SearchStaxConfigUtil && window.SearchStaxConfigUtil.attachSaveHandlers) {
+            window.SearchStaxConfigUtil.attachSaveHandlers(
+                SAVE_PATH,
+                "API configuration saved successfully."
+            );
+
+            $(document).ajaxSuccess(function (event, xhr, settings) {
+                if (window.SearchStaxConfigUtil.isServletRequest(settings.url, SAVE_PATH)) {
+                    loadConfiguration(0);
+                }
+            });
         }
+    }
+
+    $(document).ready(init);
+
+    document.addEventListener("foundation-contentloaded", function () {
+        loadConfiguration(0);
     });
-}
+
+})(document, window.Granite && Granite.$ ? Granite.$ : window.jQuery);

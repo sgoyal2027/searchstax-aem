@@ -20,7 +20,7 @@
             <clientlibs
                 jcr:primaryType="nt:unstructured"
                 sling:resourceType="granite/ui/components/coral/foundation/includeclientlibs"
-                categories="[searchstaxconnector.emailconfig.config,searchstax.cloudconfig.touch]"/>
+                categories="[searchstaxconnector.wizard,searchstaxconnector.emailconfig.config,searchstax.cloudconfig.touch]"/>
         </head>
         <body
             jcr:primaryType="nt:unstructured"
@@ -109,7 +109,7 @@
                                                                                             jcr:primaryType="nt:unstructured"
                                                                                             sling:resourceType="granite/ui/components/coral/foundation/form/password"
                                                                                             fieldLabel="SMTP Password"
-                                                                                            fieldDescription="Optional. Password for SMTP authentication. Leave blank to keep the existing password."
+                                                                                            fieldDescription="Optional. When a password is already saved, the field is locked. Click Update password to enter a new value."
                                                                                             name="smtpPassword"/>
                                                                                         <fromEmail
                                                                                             jcr:primaryType="nt:unstructured"

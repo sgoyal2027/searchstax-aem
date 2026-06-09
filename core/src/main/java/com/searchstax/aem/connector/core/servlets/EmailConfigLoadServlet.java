@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.searchstax.aem.connector.core.config.EmailConfigService;
 import com.searchstax.aem.connector.core.config.model.EmailConfig;
+import com.searchstax.aem.connector.core.utils.SecretFieldSupport;
 import org.apache.sling.api.SlingHttpServletRequest;
 import org.apache.sling.api.SlingHttpServletResponse;
 import org.apache.sling.api.servlets.SlingSafeMethodsServlet;
@@ -43,6 +44,7 @@ public class EmailConfigLoadServlet extends SlingSafeMethodsServlet {
             json.put("smtpPort", config.getSmtpPort() > 0 ? config.getSmtpPort() : 25);
             json.put("smtpUser", nullToEmpty(config.getSmtpUser()));
             json.put("smtpPassword", "");
+            json.put("smtpPasswordConfigured", SecretFieldSupport.isConfigured(config.getSmtpPassword()));
             json.put("fromEmail", nullToEmpty(config.getFromEmail()));
             json.put("receiverEmails", nullToEmpty(config.getReceiverEmails()));
             json.put("smtpUseSSL", config.isSmtpUseSsl());

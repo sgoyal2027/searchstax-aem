@@ -1,8 +1,14 @@
-$(document).ready(function () {
+(function (document, $) {
+    "use strict";
 
     if (!window.location.pathname.includes("emailconfiguration")) {
         return;
     }
+
+    var LOG = "[EmailConfig]";
+    var LOAD_PATH = "/bin/searchstaxconnector/wizard/email-config-load";
+    var TEST_PATH = "/bin/searchstaxconnector/wizard/email-config-test";
+    var SAVE_PATH = "/bin/searchstaxconnector/wizard/email-config-save";
 
     var textFields = [
         "smtpHost",
@@ -17,36 +23,133 @@ $(document).ready(function () {
         "notifyOnIndexingFailure"
     ];
 
-    var TEST_PATH = "/bin/searchstaxconnector/wizard/email-config-test";
-    var SAVE_PATH = "/bin/searchstaxconnector/wizard/email-config-save";
+    function findField(name) {
+        var candidates = [name, "./" + name];
+        var selectors = [];
 
-    Coral.commons.ready(document, function () {
-
-        $.getJSON(
-            "/bin/searchstaxconnector/wizard/email-config-load",
-            function (data) {
-                textFields.forEach(function (fieldName) {
-                    setFieldValue(fieldName, data[fieldName]);
-                });
-
-                if (data.smtpPort) {
-                    setFieldValue("smtpPort", data.smtpPort);
-                }
-
-                checkboxFields.forEach(function (fieldName) {
-                    setCheckboxValue(fieldName, Boolean(data[fieldName]));
-                });
-            }
-        ).fail(function (xhr) {
-            console.error("[EmailConfig] Failed loading configuration", xhr);
+        candidates.forEach(function (fieldName) {
+            selectors.push("coral-textfield[name='" + fieldName + "']");
+            selectors.push("coral-password[name='" + fieldName + "']");
+            selectors.push("coral-numberinput[name='" + fieldName + "']");
+            selectors.push("coral-checkbox[name='" + fieldName + "']");
+            selectors.push("input[name='" + fieldName + "']");
+            selectors.push("textarea[name='" + fieldName + "']");
+            selectors.push("[name='" + fieldName + "']");
         });
 
-        bindTestEmailButton();
-    });
+        for (var i = 0; i < selectors.length; i++) {
+            var el = document.querySelector(selectors[i]);
+            if (el) {
+                return el;
+            }
+        }
+
+        return null;
+    }
+
+    function setFieldValue(name, value) {
+        var field = findField(name);
+        if (!field) {
+            console.warn(LOG, "Field not found:", name);
+            return;
+        }
+
+        var normalized = value === undefined || value === null ? "" : String(value);
+
+        Coral.commons.ready(field, function (el) {
+            if (el.value !== undefined) {
+                el.value = normalized;
+            }
+
+            var inner = el.querySelector("input:not([type='hidden']), textarea");
+            if (inner) {
+                inner.value = normalized;
+            }
+
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+    }
+
+    function setCheckboxValue(name, checked) {
+        var field = findField(name);
+        if (!field) {
+            console.warn(LOG, "Checkbox not found:", name);
+            return;
+        }
+
+        Coral.commons.ready(field, function (el) {
+            if (el.checked !== undefined) {
+                el.checked = checked;
+            }
+
+            var inner = el.querySelector("input[type='checkbox']");
+            if (inner) {
+                inner.checked = checked;
+            }
+
+            if (checked) {
+                el.setAttribute("checked", "checked");
+            } else {
+                el.removeAttribute("checked");
+            }
+
+            el.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+    }
+
+    function populateForm(data) {
+        if (!data) {
+            return false;
+        }
+
+        var hostField = findField("smtpHost");
+        if (!hostField) {
+            return false;
+        }
+
+        textFields.forEach(function (fieldName) {
+            setFieldValue(fieldName, data[fieldName]);
+        });
+
+        if (data.smtpPort !== undefined && data.smtpPort !== null) {
+            setFieldValue("smtpPort", data.smtpPort);
+        }
+
+        checkboxFields.forEach(function (fieldName) {
+            setCheckboxValue(fieldName, Boolean(data[fieldName]));
+        });
+
+        applySecretFieldStates(data);
+
+        return true;
+    }
+
+    function applySecretFieldStates(data) {
+        if (!data || !window.SearchStaxConfigUtil || !window.SearchStaxConfigUtil.applySecretFieldStates) {
+            return;
+        }
+
+        window.SearchStaxConfigUtil.applySecretFieldStates(data, ["smtpPassword"], 0);
+    }
+
+    function loadConfiguration(attempt) {
+        attempt = attempt || 0;
+
+        $.getJSON(LOAD_PATH, function (data) {
+            if (!populateForm(data) && attempt < 10) {
+                setTimeout(function () {
+                    loadConfiguration(attempt + 1);
+                }, 200);
+            }
+        }).fail(function (xhr) {
+            console.error(LOG, "Failed loading configuration", xhr);
+        });
+    }
 
     function bindTestEmailButton() {
         var button = document.querySelector("[data-granite-id='searchstax-email-test-button']")
             || document.getElementById("searchstax-email-test-button");
+
         if (!button || button.dataset.searchstaxEmailTestBound === "true") {
             return;
         }
@@ -74,9 +177,11 @@ $(document).ready(function () {
     function setTestResult(message, isError) {
         var result = document.querySelector("[data-granite-id='searchstax-email-test-result']")
             || document.getElementById("searchstax-email-test-result");
+
         if (!result) {
             return;
         }
+
         result.textContent = message || "";
         result.style.color = isError ? "#c9252d" : "#12805c";
         result.style.marginTop = "8px";
@@ -90,6 +195,7 @@ $(document).ready(function () {
             var headers = {
                 "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
             };
+
             if (csrfToken) {
                 headers["CSRF-Token"] = csrfToken;
             }
@@ -102,16 +208,21 @@ $(document).ready(function () {
         }).then(function (response) {
             return response.text().then(function (text) {
                 var data = {};
+
                 try {
                     data = JSON.parse(text);
                 } catch (error) {
                     data = { success: false, message: "Unexpected response from server." };
                 }
+
                 return { ok: response.ok, data: data };
             });
         }).then(function (result) {
             var success = result.ok && Boolean(result.data.success);
-            setTestResult(result.data.message || (success ? "Test email sent." : "Test email failed."), !success);
+            setTestResult(
+                result.data.message || (success ? "Test email sent." : "Test email failed."),
+                !success
+            );
         }).catch(function (error) {
             setTestResult("Unable to reach test email endpoint: " + error.message, true);
         }).finally(function () {
@@ -119,66 +230,25 @@ $(document).ready(function () {
         });
     }
 
-    function isSaveRequest(requestUrl, servletPath) {
-        if (!requestUrl) {
-            return false;
+    function init() {
+        Coral.commons.ready(document, function () {
+            loadConfiguration(0);
+            bindTestEmailButton();
+        });
+
+        if (window.SearchStaxConfigUtil && window.SearchStaxConfigUtil.attachSaveHandlers) {
+            window.SearchStaxConfigUtil.attachSaveHandlers(
+                SAVE_PATH,
+                "Email configuration saved successfully."
+            );
         }
-        return requestUrl.split("?")[0].endsWith(servletPath);
     }
 
-    $(document).ajaxSuccess(function (event, xhr, settings) {
-        if (!isSaveRequest(settings.url, SAVE_PATH)) {
-            return;
-        }
+    $(document).ready(init);
 
-        var ui = $(window).adaptTo("foundation-ui");
-        ui.notify("Success", "Email configuration saved successfully.", "success");
-
-        setTimeout(function () {
-            window.location.href = "/aem/start.html";
-        }, 1500);
+    document.addEventListener("foundation-contentloaded", function () {
+        loadConfiguration(0);
+        bindTestEmailButton();
     });
 
-    $(document).ajaxError(function (event, xhr, settings) {
-        if (!isSaveRequest(settings.url, SAVE_PATH)) {
-            return;
-        }
-
-        var message = "Unable to save email configuration.";
-        try {
-            var response = JSON.parse(xhr.responseText);
-            if (response.message) {
-                message = response.message;
-            }
-        } catch (e) {
-            console.error("[EmailConfig] Failed parsing error response", e);
-        }
-
-        var ui = $(window).adaptTo("foundation-ui");
-        ui.alert("Save Failed", message, "error");
-    });
-});
-
-function setFieldValue(name, value) {
-    var field = document.querySelector("[name='" + name + "']");
-    if (!field) {
-        return;
-    }
-    Coral.commons.ready(field, function (el) {
-        if (el.value !== undefined) {
-            el.value = value || "";
-        }
-    });
-}
-
-function setCheckboxValue(name, checked) {
-    var field = document.querySelector("[name='" + name + "']");
-    if (!field) {
-        return;
-    }
-    Coral.commons.ready(field, function (el) {
-        if (el.checked !== undefined) {
-            el.checked = checked;
-        }
-    });
-}
+})(document, window.Granite && Granite.$ ? Granite.$ : window.jQuery);

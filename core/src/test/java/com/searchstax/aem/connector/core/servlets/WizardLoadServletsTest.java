@@ -110,6 +110,8 @@ class WizardLoadServletsTest {
         assertEquals("https://api.example.com", json.get("endpointUrl").asText());
         assertEquals("https://update.example.com", json.get("updateEndpoint").asText());
         assertEquals("", json.get("updateToken").asText());
+        assertTrue(json.get("updateTokenConfigured").asBoolean());
+        assertFalse(json.get("apiTokenConfigured").asBoolean());
     }
 
     @Test
@@ -120,6 +122,7 @@ class WizardLoadServletsTest {
         config.setFromEmail("from@example.com");
         config.setReceiverEmails("ops@example.com");
         config.setNotifyOnIndexingFailure(true);
+        config.setSmtpPassword("stored-secret");
         when(emailConfigService.getConfiguration()).thenReturn(config);
 
         final EmailConfigLoadServlet servlet = context.registerInjectActivateService(new EmailConfigLoadServlet());
@@ -129,7 +132,22 @@ class WizardLoadServletsTest {
         assertEquals("smtp.gmail.com", json.get("smtpHost").asText());
         assertEquals(587, json.get("smtpPort").asInt());
         assertEquals("", json.get("smtpPassword").asText());
+        assertTrue(json.get("smtpPasswordConfigured").asBoolean());
         assertTrue(json.get("notifyOnIndexingFailure").asBoolean());
+    }
+
+    @Test
+    void emailConfigLoadServletReportsPasswordNotConfiguredWhenMissing() throws Exception {
+        final EmailConfig config = new EmailConfig();
+        config.setSmtpHost("smtp.gmail.com");
+        config.setSmtpPort(587);
+        when(emailConfigService.getConfiguration()).thenReturn(config);
+
+        final EmailConfigLoadServlet servlet = context.registerInjectActivateService(new EmailConfigLoadServlet());
+        servlet.doGet(context.request(), context.response());
+
+        final JsonNode json = objectMapper.readTree(context.response().getOutputAsString());
+        assertFalse(json.get("smtpPasswordConfigured").asBoolean());
     }
 
     @Test

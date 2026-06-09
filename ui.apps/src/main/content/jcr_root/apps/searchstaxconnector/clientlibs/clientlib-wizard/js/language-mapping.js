@@ -350,4 +350,4 @@
         setTimeout(refreshLanguageMappingOptions, 300);
     });
 
-})(Granite.$, document);
+})(window.Granite && window.Granite.$ ? window.Granite.$ : window.jQuery, document);

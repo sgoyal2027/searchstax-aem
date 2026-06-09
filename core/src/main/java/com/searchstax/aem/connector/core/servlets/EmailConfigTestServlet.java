@@ -63,8 +63,11 @@ public class EmailConfigTestServlet extends SlingAllMethodsServlet {
             return;
         }
 
+        final String detail = emailService.getLastSendError();
         JsonServletResponseUtil.writeInternalError(
                 response,
-                "Test email failed. Check searchstaxconnector.log for SMTP authentication or TLS details.");
+                detail == null || detail.isEmpty()
+                        ? "Test email failed. Check searchstaxconnector.log for SMTP authentication or TLS details."
+                        : detail);
     }
 }

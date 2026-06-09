@@ -91,10 +91,11 @@
     </build>
 
     <dependencies>
+        <!-- Embedded in OSGi bundle; AEM 6.5 platform javax.mail 1.5 cannot negotiate TLS 1.2 on Java 11. -->
         <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-email</artifactId>
-            <version>1.5</version>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>javax.mail</artifactId>
+            <version>1.6.2</version>
         </dependency>
         <dependency>
             <groupId>uk.org.lidalia</groupId>
